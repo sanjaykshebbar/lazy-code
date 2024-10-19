@@ -30,4 +30,4 @@ echo "📡 resolv.conf has been updated! Your internet is now groovier!"
 # Step 4: Force Reboot the machine
 echo "🌀 Time to reboot and let all these changes take effect!"
 echo "🚀 Rebooting now... See you on the other side!"
-sudo reboot -f
+sudo reboot
