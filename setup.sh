@@ -10,16 +10,21 @@ echo "🚀 Your hostname has been changed to: $new_hostname"
 
 # Step 2: Install OpenSSH Server
 echo "🔍 Now, let's install the OpenSSH server... Hold tight!"
-sudo apt update && sudo apt install -y openssh-server
-echo "🔑 OpenSSH server is now installed! Time to secure those connections!"
+sudo apt update
+if sudo apt install -y openssh-server; then
+    echo "🔑 OpenSSH server is now installed! Time to secure those connections!"
+else
+    echo "❌ Installation failed. Please check your package manager."
+    exit 1
+fi
 
 # Step 3: Update resolv.conf with cool DNS servers
 echo "🌐 Updating resolv.conf with cool DNS servers (8.8.8.8 and 8.8.4.4)!"
-sudo bash -c 'cat <<EOL > /etc/resolv.conf
-# Funky DNS Configuration
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-EOL'
+{
+    echo "# Funky DNS Configuration"
+    echo "nameserver 8.8.8.8"
+    echo "nameserver 8.8.4.4"
+} | sudo tee /etc/resolv.conf > /dev/null
 echo "📡 resolv.conf has been updated! Your internet is now groovier!"
 
 # Step 4: Reboot the machine
