@@ -3,4 +3,4 @@ Lazy Code - I'm trying to add some script files so that the installation and env
 
 
 1. Initial setup of Ubuntu - curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/setup.sh | sudo sh
-   
+2. Reset Kubernetes cluster - curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/reset_kubernetes.sh | sudo sh
