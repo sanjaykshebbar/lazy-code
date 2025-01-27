@@ -33,17 +33,17 @@ install_java() {
 
 # Function to install Maven
 install_maven() {
-    # Download Maven 3.5.4
-    wget https://archive.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.zip
+    # Download Maven 3.9.9
+    wget https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz
 
     # Extract the downloaded file
-    unzip apache-maven-3.5.4-bin.zip
+    tar -xzf apache-maven-3.9.9-bin.tar.gz
 
-    # Move the extracted folder to /usr/local
-    mv apache-maven-3.5.4 /usr/local/
+    # Move the extracted folder to ~/Documents
+    mv apache-maven-3.9.9 ~/Documents/
 
     # Set up environment variables for Maven
-    echo "export M2_HOME=/usr/local/apache-maven-3.5.4" >> ~/.zshrc
+    echo "export M2_HOME=~/Documents/apache-maven-3.9.9" >> ~/.zshrc
     echo "export PATH=\$M2_HOME/bin:\$PATH" >> ~/.zshrc
 
     # Apply the changes
