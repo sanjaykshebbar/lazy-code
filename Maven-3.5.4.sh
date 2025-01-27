@@ -9,12 +9,12 @@ unzip apache-maven-3.5.4-bin.zip
 # Move the extracted folder to /usr/local
 sudo mv apache-maven-3.5.4 /usr/local/
 
-# Set up environment variables
-echo "export M2_HOME=/usr/local/apache-maven-3.5.4" >> ~/.bash_profile
-echo "export PATH=\$M2_HOME/bin:\$PATH" >> ~/.bash_profile
+# Set up environment variables in ~/.zshrc
+echo "export M2_HOME=/usr/local/apache-maven-3.5.4" >> ~/.zshrc
+echo "export PATH=\$M2_HOME/bin:\$PATH" >> ~/.zshrc
 
 # Apply the changes
-source ~/.bash_profile
+source ~/.zshrc
 
 # Verify the installation
 mvn -version
