@@ -12,7 +12,7 @@ ADMIN_USER="ithelpdesk"
 safe_rm() {
     if [ -d "$1" ]; then
         echo -e "${GREEN}Cleaning $1...${NC}"
-        rm -rfv "$1"/*
+        sudo rm -rfv "$1"/*
     else
         echo -e "${RED}Directory $1 does not exist and will be ignored.${NC}"
     fi
@@ -32,17 +32,6 @@ clean_external_drives() {
     done
 }
 
-# Function to prompt for password
-prompt_for_password() {
-    echo -e "${RED}Please enter the password for the admin user '$ADMIN_USER' to continue:${NC}"
-    read -s password
-}
-
-# Function to run a command as $ADMIN_USER with password prompt
-run_as_admin() {
-    echo "$password" | sudo -S -u "$ADMIN_USER" "$@"
-}
-
 # Function to calculate elapsed time in minutes and seconds
 elapsed_time() {
     local SECONDS=$(($SECONDS - $START_TIME))
@@ -60,64 +49,58 @@ fi
 # Start the timer
 START_TIME=$SECONDS
 
-# Prompt for password once at the beginning
-prompt_for_password
-
-# Use sudo to cache the password for further commands
-echo "$password" | sudo -S true
-
 echo "Starting cleanup..."
 
 # Remove .DS_Store files from the system
 echo -n "Removing .DS_Store files..."
-run_as_admin find / -name '.DS_Store' -type f -delete
+sudo find / -name '.DS_Store' -type f -delete
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Clean cache files
 echo -n "Cleaning cache files..."
-run_as_admin safe_rm ~/Library/Logs/
-run_as_admin safe_rm ~/System/Library/Caches/
-run_as_admin safe_rm ~/Library/Logs/CrashReporter/CoreCapture
-run_as_admin safe_rm ~/Library/Logs/CrashReporter
-run_as_admin safe_rm ~/Library/Logs/Microsoft/InstallLogs
-run_as_admin safe_rm ~/Library/Caches
-run_as_admin safe_rm /Library/Caches
-run_as_admin safe_rm /System/Library/Caches
-run_as_admin safe_rm /Users/$(whoami)/Library/Caches
+safe_rm ~/Library/Logs/
+safe_rm ~/System/Library/Caches/
+safe_rm ~/Library/Logs/CrashReporter/CoreCapture
+safe_rm ~/Library/Logs/CrashReporter
+safe_rm ~/Library/Logs/Microsoft/InstallLogs
+safe_rm ~/Library/Caches
+safe_rm /Library/Caches
+safe_rm /System/Library/Caches
+safe_rm /Users/$(whoami)/Library/Caches
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Restart network services
 echo -n "Restarting network services..."
-run_as_admin killall -HUP mDNSResponder
+sudo killall -HUP mDNSResponder
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Clean system logs and crash reports
 echo -n "Cleaning system logs and crash reports..."
-run_as_admin safe_rm /var/log
-run_as_admin safe_rm ~/Library/Logs
-run_as_admin safe_rm /Library/Logs
-run_as_admin safe_rm /Library/Logs/DiagnosticReports
+safe_rm /var/log
+safe_rm ~/Library/Logs
+safe_rm /Library/Logs
+safe_rm /Library/Logs/DiagnosticReports
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Clean temporary files
 echo -n "Cleaning temporary files..."
-run_as_admin safe_rm /private/var/folders
+safe_rm /private/var/folders
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Empty Trash
 echo -n "Removing items from trash..."
-run_as_admin safe_rm ~/.Trash
+safe_rm ~/.Trash
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Clean Time Machine snapshots
 echo -n "Cleaning Time Machine snapshots..."
-run_as_admin tmutil listlocalsnapshots / | grep 'com.apple.TimeMachine' | while read -r snapshot; do
+sudo tmutil listlocalsnapshots / | grep 'com.apple.TimeMachine' | while read -r snapshot; do
     sudo tmutil deletelocalsnapshots "${snapshot##* }"
 done
 elapsed_time
@@ -125,13 +108,13 @@ echo -e "${GREEN}Done!${NC}"
 
 # Update Spotlight index
 echo -n "Updating Spotlight index..."
-run_as_admin sudo mdutil -E /
+sudo mdutil -E /
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
 # Clean Dock data sources
 echo -n "Cleaning Dock data sources..."
-run_as_admin killall Dock
+sudo killall Dock
 elapsed_time
 echo -e "${GREEN}Done!${NC}"
 
