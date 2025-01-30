@@ -1,129 +1,115 @@
 #!/bin/bash
 
-# Defining colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-# Default admin user
-ADMIN_USER="ithelpdesk"
-
-# Function to check if the directory exists before attempting to clean it
-safe_rm() {
-    if [ -d "$1" ]; then
-        echo -e "${GREEN}Cleaning $1...${NC}"
-        sudo rm -rfv "$1"/*
-    else
-        echo -e "${RED}Directory $1 does not exist and will be ignored.${NC}"
-    fi
+# Function to print messages with color
+print_message() {
+    local message="$1"
+    local color="$2"
+    echo -e "\033[${color}m${message}\033[0m"
 }
 
-# Function to clean external drives
-clean_external_drives() {
-    echo -e "${GREEN}Cleaning external drives...${NC}"
-    for disk in $(diskutil list | grep 'external' | awk '{print $NF}'); do
-        mount_point=$(diskutil info "$disk" | grep 'Mount Point' | awk -F': ' '{print $2}')
-        if [ "$mount_point" != "Not mounted" ] && [ -n "$mount_point" ]; then
-            echo -e "${GREEN}Cleaning $mount_point...${NC}"
-            safe_rm "$mount_point"
-        else
-            echo -e "${RED}$disk is not mounted or mount point not found.${NC}"
-        fi
+# Timer function that will run in the background
+show_timer() {
+    SECONDS=0
+    while true; do
+        printf "\rTime elapsed: %02d:%02d:%02d" $(($SECONDS / 3600)) $(($SECONDS % 3600 / 60)) $(($SECONDS % 60))
+        sleep 1
     done
 }
 
-# Function to calculate elapsed time in minutes and seconds
-elapsed_time() {
-    local SECONDS=$(($SECONDS - $START_TIME))
-    local MINUTES=$((SECONDS / 60))
-    local REMAINING_SECONDS=$((SECONDS % 60))
-    echo -e "${GREEN}Elapsed time: ${MINUTES}m ${REMAINING_SECONDS}s${NC}"
+# Function to clear system caches
+clear_system_caches() {
+    print_message "Clearing system caches..." "33"  # Yellow for info
+    rm -rf ~/Library/Caches/*
+    if [ $? -eq 0 ]; then
+        print_message "System caches cleared." "32"  # Green for success
+    else
+        print_message "Error clearing system caches." "31"  # Red for error
+    fi
 }
 
-# Check if the script is run as root (required for some operations)
-if [ "$(id -u)" -ne "0" ]; then
-  echo -e "${RED}This script needs to be run as root (sudo).${NC}"
-  exit 1
-fi
+# Function to clear application logs
+clear_app_logs() {
+    print_message "Clearing application logs..." "33"
+    rm -rf ~/Library/Logs/*
+    if [ $? -eq 0 ]; then
+        print_message "Application logs cleared." "32"
+    else
+        print_message "Error clearing application logs." "31"
+    fi
+}
 
-# Start the timer
-START_TIME=$SECONDS
+# Function to clear browser caches
+clear_browser_caches() {
+    print_message "Clearing browser caches..." "33"
+    rm -rf ~/Library/Safari/*
+    rm -rf ~/Library/Application\ Support/Google/Chrome/Default/Cache/*
+    rm -rf ~/Library/Application\ Support/Firefox/Profiles/*.default-release/cache2/*
+    if [ $? -eq 0 ]; then
+        print_message "Browser caches cleared." "32"
+    else
+        print_message "Error clearing browser caches." "31"
+    fi
+}
 
-echo "Starting cleanup..."
+# Function to clear trash
+clear_trash() {
+    print_message "Emptying the Trash..." "33"
+    
+    # Check if the Trash path exists and is not empty
+    if [ -d "$HOME/.Trash" ] && [ "$(ls -A $HOME/.Trash)" ]; then
+        sudo rm -rf ~/.Trash/*
+        if [ $? -eq 0 ]; then
+            print_message "Trash emptied." "32"
+        else
+            print_message "Error emptying the Trash." "31"
+        fi
+    else
+        print_message "Trash is already empty." "32"
+    fi
+}
 
-# Remove .DS_Store files from the system
-echo -n "Removing .DS_Store files..."
-sudo find / -name '.DS_Store' -type f -delete
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
 
-# Clean cache files
-echo -n "Cleaning cache files..."
-safe_rm ~/Library/Logs/
-safe_rm ~/System/Library/Caches/
-safe_rm ~/Library/Logs/CrashReporter/CoreCapture
-safe_rm ~/Library/Logs/CrashReporter
-safe_rm ~/Library/Logs/Microsoft/InstallLogs
-safe_rm ~/Library/Caches
-safe_rm /Library/Caches
-safe_rm /System/Library/Caches
-safe_rm /Users/$(whoami)/Library/Caches
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
+# Function to clear downloads
+clear_downloads() {
+    print_message "Clearing Downloads folder..." "33"
+    rm -rf ~/Downloads/*
+    if [ $? -eq 0 ]; then
+        print_message "Downloads folder cleared." "32"
+    else
+        print_message "Error clearing Downloads folder." "31"
+    fi
+}
 
-# Restart network services
-echo -n "Restarting network services..."
-sudo killall -HUP mDNSResponder
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
+# Function to clear mail downloads
+clear_mail_downloads() {
+    print_message "Clearing Mail downloads..." "33"
+    rm -rf ~/Library/Containers/com.apple.mail/Data/Library/Mail\ Downloads/*
+    if [ $? -eq 0 ]; then
+        print_message "Mail downloads cleared." "32"
+    else
+        print_message "Error clearing Mail downloads." "31"
+    fi
+}
 
-# Clean system logs and crash reports
-echo -n "Cleaning system logs and crash reports..."
-safe_rm /var/log
-safe_rm ~/Library/Logs
-safe_rm /Library/Logs
-safe_rm /Library/Logs/DiagnosticReports
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
+# Main function to run all cleanup tasks
+main() {
+    # Start the timer in the background
+    show_timer &
+    timer_pid=$!
+    
+    clear_system_caches
+    clear_app_logs
+    clear_browser_caches
+    clear_trash
+    clear_downloads
+    clear_mail_downloads
+    
+    # Kill the timer process
+    kill $timer_pid
+    
+    print_message "All junk files cleared." "32"
+    print_message "Cleanup completed in $(($SECONDS / 3600)) hours $(($SECONDS % 3600 / 60)) minutes $(($SECONDS % 60)) seconds." "32"
+}
 
-# Clean temporary files
-echo -n "Cleaning temporary files..."
-safe_rm /private/var/folders
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
-
-# Empty Trash
-echo -n "Removing items from trash..."
-safe_rm ~/.Trash
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
-
-# Clean Time Machine snapshots
-echo -n "Cleaning Time Machine snapshots..."
-sudo tmutil listlocalsnapshots / | grep 'com.apple.TimeMachine' | while read -r snapshot; do
-    sudo tmutil deletelocalsnapshots "${snapshot##* }"
-done
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
-
-# Update Spotlight index
-echo -n "Updating Spotlight index..."
-sudo mdutil -E /
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
-
-# Clean Dock data sources
-echo -n "Cleaning Dock data sources..."
-sudo killall Dock
-elapsed_time
-echo -e "${GREEN}Done!${NC}"
-
-# Clean external drives
-clean_external_drives
-
-# Adding a free space check after cleaning
-FREE_SPACE=$(df -h / | tail -1 | awk '{print $4}')
-elapsed_time
-echo -e "${GREEN}Free space after cleaning: $FREE_SPACE${NC}"
-
-echo -e "${GREEN}Cleanup completed! All junk files cleared and trash permanently emptied.${NC}"
+# Run the main function
+main
