@@ -5,14 +5,6 @@ HOMEBREW_DIR="$HOME/homebrew"
 ZSHRC_FILE="$HOME/.zshrc"
 BREW_INSTALL_URL="https://bit.ly/brew-mac"
 
-# Step 1: Check for Xcode Command Line Tools
-echo "Checking for Xcode Command Line Tools..."
-if ! xcode-select -p &>/dev/null; then
-    echo "Xcode Command Line Tools not found. Please install them manually with:"
-    echo "xcode-select --install"
-    exit 1
-fi
-echo "Xcode Command Line Tools are installed."
 
 # Step 2: Create Homebrew directory in the user's home directory
 echo "Creating Homebrew directory at $HOMEBREW_DIR..."
