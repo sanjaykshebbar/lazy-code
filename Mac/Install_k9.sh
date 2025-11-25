@@ -38,19 +38,17 @@ fi
 
 echo "Latest Version: $LATEST_VERSION"
 
-# CORRECT FILENAME FORMAT: k9s_Darwin_amd64.tar.gz
-K9S_TAR="k9s_${PLATFORM}.tar.gz"
-
-# CORRECT DOWNLOAD URL FORMAT:
-DOWNLOAD_URL="https://github.com/derailed/k9s/releases/download/${LATEST_VERSION}/${K9S_TAR}"
+# Correct macOS release format
+K9S_ZIP="k9s_${PLATFORM}.zip"
+DOWNLOAD_URL="https://github.com/derailed/k9s/releases/download/${LATEST_VERSION}/${K9S_ZIP}"
 
 echo "[2/5] Downloading from:"
 echo "$DOWNLOAD_URL"
 
-curl -L -o "$K9S_TAR" "$DOWNLOAD_URL"
+curl -L -o "$K9S_ZIP" "$DOWNLOAD_URL"
 
-echo "[3/5] Extracting..."
-tar -xzf "$K9S_TAR"
+echo "[3/5] Extracting ZIP..."
+unzip -o "$K9S_ZIP"
 
 echo "[4/5] Installing..."
 mv k9s "$K9S_DIR/k9s"
@@ -59,7 +57,6 @@ chmod +x "$K9S_DIR/k9s"
 cd /
 rm -rf "$TMP_DIR"
 
-# Add to PATH if not already added
 if ! grep -q 'export PATH="$HOME/Clitools/k9s:$PATH"' ~/.zshrc; then
     echo 'export PATH="$HOME/Clitools/k9s:$PATH"' >> ~/.zshrc
 fi
