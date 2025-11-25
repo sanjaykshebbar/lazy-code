@@ -13,7 +13,7 @@ if [[ "$ARCH" == "arm64" ]]; then
     PLATFORM="Darwin_arm64"
     echo "[INFO] Detected Apple Silicon (ARM64)"
 else
-    PLATFORM="Darwin_x86_64"
+    PLATFORM="Darwin_amd64"
     echo "[INFO] Detected Intel (x86_64)"
 fi
 
@@ -32,14 +32,16 @@ LATEST_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/late
   | grep tag_name | cut -d '"' -f4)
 
 if [[ -z "$LATEST_VERSION" ]]; then
-    echo "ERROR: Unable to fetch latest version!"
+    echo "ERROR: Could not fetch latest version!"
     exit 1
 fi
 
 echo "Latest Version: $LATEST_VERSION"
 
-# Correct filename (K9s DOES NOT include version in asset filename)
+# CORRECT FILENAME FORMAT: k9s_Darwin_amd64.tar.gz
 K9S_TAR="k9s_${PLATFORM}.tar.gz"
+
+# CORRECT DOWNLOAD URL FORMAT:
 DOWNLOAD_URL="https://github.com/derailed/k9s/releases/download/${LATEST_VERSION}/${K9S_TAR}"
 
 echo "[2/5] Downloading from:"
@@ -57,6 +59,7 @@ chmod +x "$K9S_DIR/k9s"
 cd /
 rm -rf "$TMP_DIR"
 
+# Add to PATH if not already added
 if ! grep -q 'export PATH="$HOME/Clitools/k9s:$PATH"' ~/.zshrc; then
     echo 'export PATH="$HOME/Clitools/k9s:$PATH"' >> ~/.zshrc
 fi
