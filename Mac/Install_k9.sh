@@ -28,7 +28,8 @@ cd "$TMP_DIR"
 
 echo "[1/5] Fetching latest K9s version..."
 
-LATEST_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | grep tag_name | cut -d '"' -f4)
+LATEST_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest \
+  | grep tag_name | cut -d '"' -f4)
 
 if [[ -z "$LATEST_VERSION" ]]; then
     echo "ERROR: Unable to fetch latest version!"
@@ -37,6 +38,7 @@ fi
 
 echo "Latest Version: $LATEST_VERSION"
 
+# Correct filename (K9s DOES NOT include version in asset filename)
 K9S_TAR="k9s_${PLATFORM}.tar.gz"
 DOWNLOAD_URL="https://github.com/derailed/k9s/releases/download/${LATEST_VERSION}/${K9S_TAR}"
 
@@ -59,8 +61,9 @@ if ! grep -q 'export PATH="$HOME/Clitools/k9s:$PATH"' ~/.zshrc; then
     echo 'export PATH="$HOME/Clitools/k9s:$PATH"' >> ~/.zshrc
 fi
 
+echo
 echo "Run: source ~/.zshrc"
-
+echo
 echo "=========================================="
 echo " K9s Installed Successfully!"
 echo " Version: $($K9S_DIR/k9s version)"
