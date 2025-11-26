@@ -1,70 +1,36 @@
 #!/bin/zsh
-
 set -e
 
-# Detect Mac architecture
-ARCH=$(uname -m)
-if [ "$ARCH" = "x86_64" ]; then
-    K9S_ARCH="Darwin_amd64"
-elif [ "$ARCH" = "arm64" ]; then
-    K9S_ARCH="Darwin_arm64"
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-fi
+# Use fixed download URL
+URL="https://github.com/derailed/k9s/releases/download/v0.50.16/k9s_Darwin_amd64.tar.gz"
 
-echo "Detected architecture: $K9S_ARCH"
+TMP=$(mktemp -d)
+cd "$TMP"
 
-# Fetch latest release version
-LATEST=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest \
-    | grep tag_name | cut -d '"' -f4)
+echo "Downloading K9s..."
+curl -L -o k9s.tar.gz "$URL"
 
-if [ -z "$LATEST" ]; then
-    echo "Failed to fetch latest version."
-    exit 1
-fi
-
-echo "Latest K9s version: $LATEST"
-
-# Correct download URL
-K9S_URL="https://github.com/derailed/k9s/releases/download/${LATEST}/k9s_${K9S_ARCH}.tar.gz"
-
-# Temp workspace
-TMP_DIR=$(mktemp -d)
-cd "$TMP_DIR"
-
-echo "Downloading: $K9S_URL"
-curl -L -o k9s.tar.gz "$K9S_URL"
-
-# Verify file is actually a gzip archive
-if ! file k9s.tar.gz | grep -q "gzip compressed data"; then
-    echo "Downloaded file is not a valid tar.gz. Aborting."
-    exit 1
-fi
+file k9s.tar.gz | grep -q "gzip compressed data" || { echo "Download failed or invalid archive"; exit 1; }
 
 echo "Extracting..."
 tar -xzf k9s.tar.gz
 
-# Install location
-TARGET_DIR="$HOME/Clitools/k9s"
-mkdir -p "$TARGET_DIR"
+mkdir -p "$HOME/Clitools/k9s"
+mv k9s "$HOME/Clitools/k9s/"
+chmod +x "$HOME/Clitools/k9s/k9s"
+echo "Installed k9s to $HOME/Clitools/k9s/k9s"
 
-mv k9s "$TARGET_DIR/"
-chmod +x "$TARGET_DIR/k9s"
-
-echo "Installed to $TARGET_DIR/k9s"
-
-# Update PATH in .zshrc
 ZSHRC="$HOME/.zshrc"
-PATH_LINE='export PATH="$HOME/Clitools/k9s:$PATH"'
-
-if ! grep -q "Clitools/k9s" "$ZSHRC"; then
-    echo "\n# Added by k9s installer" >> "$ZSHRC"
-    echo "$PATH_LINE" >> "$ZSHRC"
-    echo "Updated .zshrc"
+LINE='export PATH="$HOME/Clitools/k9s:$PATH"'
+if ! grep -q 'Clitools/k9s' "$ZSHRC"; then
+  echo "" >> "$ZSHRC"
+  echo "# added by k9s installer" >> "$ZSHRC"
+  echo "$LINE" >> "$ZSHRC"
+  echo "Updated .zshrc"
+else
+  echo ".zshrc already updated"
 fi
 
-echo "Cleaning up..."
-rm -rf "$TMP_DIR"
-
-echo "Done. Run: source ~/.zshrc"
+cd ~
+rm -rf "$TMP"
+echo "Done. Please run: source ~/.zshrc"
