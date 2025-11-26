@@ -1,71 +1,69 @@
-#!/bin/bash
+#!/bin/zsh
 
 set -e
 
-echo "=========================================="
-echo "     K9s Installation (No Homebrew)"
-echo "     macOS Intel + Apple Silicon"
-echo "=========================================="
-
+# Detect Mac architecture
 ARCH=$(uname -m)
-
-if [[ "$ARCH" == "arm64" ]]; then
-    PLATFORM="Darwin_arm64"
-    echo "[INFO] Detected Apple Silicon (ARM64)"
+if [ "$ARCH" = "x86_64" ]; then
+    K9S_ARCH="Darwin_x86_64"
+elif [ "$ARCH" = "arm64" ]; then
+    K9S_ARCH="Darwin_arm64"
 else
-    PLATFORM="Darwin_amd64"
-    echo "[INFO] Detected Intel (x86_64)"
-fi
-
-CLITOOLS_DIR="$HOME/Clitools"
-K9S_DIR="$CLITOOLS_DIR/k9s"
-TMP_DIR="/tmp/k9s_install"
-
-mkdir -p "$K9S_DIR"
-mkdir -p "$TMP_DIR"
-
-cd "$TMP_DIR"
-
-echo "[1/5] Fetching latest K9s version..."
-
-LATEST_VERSION=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest \
-  | grep tag_name | cut -d '"' -f4)
-
-if [[ -z "$LATEST_VERSION" ]]; then
-    echo "ERROR: Could not fetch latest version!"
+    echo "Unsupported architecture: $ARCH"
     exit 1
 fi
 
-echo "Latest Version: $LATEST_VERSION"
+echo "Detected architecture: $K9S_ARCH"
 
-# Correct macOS release format
-K9S_ZIP="k9s_${PLATFORM}.zip"
-DOWNLOAD_URL="https://github.com/derailed/k9s/releases/download/${LATEST_VERSION}/${K9S_ZIP}"
+# Get latest K9s release version
+LATEST=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest \
+    | grep tag_name | cut -d '"' -f4)
 
-echo "[2/5] Downloading from:"
-echo "$DOWNLOAD_URL"
-
-curl -L -o "$K9S_ZIP" "$DOWNLOAD_URL"
-
-echo "[3/5] Extracting ZIP..."
-unzip -o "$K9S_ZIP"
-
-echo "[4/5] Installing..."
-mv k9s "$K9S_DIR/k9s"
-chmod +x "$K9S_DIR/k9s"
-
-cd /
-rm -rf "$TMP_DIR"
-
-if ! grep -q 'export PATH="$HOME/Clitools/k9s:$PATH"' ~/.zshrc; then
-    echo 'export PATH="$HOME/Clitools/k9s:$PATH"' >> ~/.zshrc
+if [ -z "$LATEST" ]; then
+    echo "Failed to fetch latest K9s version."
+    exit 1
 fi
 
-echo
-echo "Run: source ~/.zshrc"
-echo
-echo "=========================================="
-echo " K9s Installed Successfully!"
-echo " Version: $($K9S_DIR/k9s version)"
-echo " Location: $K9S_DIR/k9s"
-echo "=========================================="
+echo "Latest K9s version: $LATEST"
+
+# Download URL
+K9S_URL="https://github.com/derailed/k9s/releases/download/${LATEST}/k9s_${K9S_ARCH}.tar.gz"
+
+# Temp download location
+TMP_DIR=$(mktemp -d)
+cd "$TMP_DIR"
+
+echo "Downloading K9s from: $K9S_URL"
+curl -L -o k9s.tar.gz "$K9S_URL"
+
+echo "Extracting..."
+tar -xzf k9s.tar.gz
+
+# Prepare target directory
+TARGET_DIR="$HOME/Clitools/k9s"
+mkdir -p "$TARGET_DIR"
+
+# Move binary
+mv k9s "$TARGET_DIR/"
+chmod +x "$TARGET_DIR/k9s"
+
+echo "K9s installed to: $TARGET_DIR/k9s"
+
+# Update .zshrc if PATH entry missing
+ZSHRC="$HOME/.zshrc"
+K9S_PATH_CMD='export PATH="$HOME/Clitools/k9s:$PATH"'
+
+if ! grep -q 'Clitools/k9s' "$ZSHRC"; then
+    echo "" >> "$ZSHRC"
+    echo "# Added by K9s installer" >> "$ZSHRC"
+    echo "$K9S_PATH_CMD" >> "$ZSHRC"
+    echo "Updated .zshrc with K9s path."
+else
+    echo ".zshrc already contains K9s path. Skipping update."
+fi
+
+echo "Cleaning up..."
+rm -rf "$TMP_DIR"
+
+echo "Installation complete. Restart your terminal or run:"
+echo "source ~/.zshrc"
