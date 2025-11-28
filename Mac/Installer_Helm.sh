@@ -41,6 +41,8 @@ fi
 echo "Cleaning up..."
 rm helm.tar.gz
 
+echo "Refereshing the Terminal"
+source ~/.zshrc
 echo "Helm installation complete!"
-echo "Run the following command to activate Helm CLI:"
+echo " if it didnot execute thenRun the following command to activate Helm CLI:"
 echo "source ~/.zshrc"
