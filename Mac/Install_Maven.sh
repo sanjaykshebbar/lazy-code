@@ -1,40 +1,47 @@
 #!/bin/sh
 
 ARCH=$(uname -m)
-echo "Detected architecture: $ARCH"
 
+# Detect architecture type
 if [ "$ARCH" = "arm64" ]; then
+    echo "Detected Mac Type: Apple Silicon (ARM64)"
     DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-aarch64.zip"
 else
+    echo "Detected Mac Type: Intel (x86_64)"
     DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-amd64.zip"
 fi
 
 echo "Downloading mvnd from: $DOWNLOAD_URL"
-curl -L -o mvnd.zip "$DOWNLOAD_URL"
+curl -L -o mvn.zip "$DOWNLOAD_URL"
 
 echo "Unzipping..."
-unzip -q mvnd.zip
+unzip -q mvn.zip
 
-# Define install paths
 BASE_DIR="$HOME/Clitools"
-MAVEN_DIR="$BASE_DIR/mvnd"
+TARGET_DIR="$BASE_DIR/mvn"
 
-# Create required directories
-mkdir -p "$MAVEN_DIR"
+# Create folder if missing
+mkdir -p "$BASE_DIR"
 
-# Move extracted folder
+# Detect extracted folder
 EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "maven-mvnd-1.0.3*")
-mv "$EXTRACTED_DIR" "$MAVEN_DIR"
 
-# Add the mvn and mvnd binaries to PATH
-if ! grep -q "Clitools/mvnd" ~/.zshrc; then
-    echo "\n# mvnd + maven path" >> ~/.zshrc
-    echo "export PATH=\"\$PATH:$MAVEN_DIR/maven-mvnd-1.0.3-darwin-amd64/mvn/bin\"" >> ~/.zshrc
-    echo "export PATH=\"\$PATH:$MAVEN_DIR/maven-mvnd-1.0.3-darwin-amd64/bin\"" >> ~/.zshrc
+# Remove existing mvn folder to avoid conflicts
+rm -rf "$TARGET_DIR"
+
+# Move extracted directory into ~/Clitools/mvn
+mv "$EXTRACTED_DIR" "$TARGET_DIR"
+
+# Add PATH entries only if not already present
+if ! grep -q "Clitools/mvn" ~/.zshrc; then
+    echo "\n# Maven + mvnd path" >> ~/.zshrc
+    echo "export PATH=\"\$PATH:$TARGET_DIR/mvn/bin\"" >> ~/.zshrc   # mvn CLI
+    echo "export PATH=\"\$PATH:$TARGET_DIR/bin\"" >> ~/.zshrc       # mvnd CLI
 fi
 
 echo "Cleaning up..."
-rm mvnd.zip
+rm mvn.zip
 
 echo "Installation complete!"
-echo "Run: source ~/.zshrc"
+echo "Run the following command to activate mvn and mvnd:"
+echo "source ~/.zshrc"
