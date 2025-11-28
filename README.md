@@ -14,3 +14,9 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install_terraform.sh | sh
 ```
+---
+#### Install Maven on MacOS (No Sudo, No Homebrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Install_Maven.sh | sh
+```
+---
