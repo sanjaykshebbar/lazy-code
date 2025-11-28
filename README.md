@@ -10,12 +10,12 @@ These scripts reduce manual steps, maintain consistency, and save valuable setup
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Install_k9.sh | zsh
 ```
 ---
-#### Install Terraform on macOS (No Sudo, No Homebrew)
+* #### Install Terraform on macOS (No Sudo, No Homebrew)
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install_terraform.sh | sh
 ```
 ---
-#### Install Maven on MacOS (No Sudo, No Homebrew)
+* #### Install Maven on MacOS (No Sudo, No Homebrew)
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Install_Maven.sh | sh
 ```
