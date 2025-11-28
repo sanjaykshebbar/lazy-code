@@ -1,66 +1,59 @@
 #!/bin/zsh
 set -e
 
-# Detect architecture (not required by Maven, but you asked for it)
+# Detect architecture
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
-    CPU="Intel"
+  MVND_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-amd64.zip"
 elif [ "$ARCH" = "arm64" ]; then
-    CPU="Apple Silicon"
+  MVND_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-aarch64.zip"
 else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
+  echo "Unsupported architecture: $ARCH"
+  exit 1
 fi
 
-echo "Detected: $CPU"
+echo "Detected architecture: $ARCH"
+echo "Downloading mvnd from: $MVND_URL"
 
-# Maven version to install (latest stable as of now)
-MAVEN_VERSION="3.9.9"
-MAVEN_TAR="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-MAVEN_URL="https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/${MAVEN_TAR}"
-
-# Prepare workspace
 TMP=$(mktemp -d)
 cd "$TMP"
 
-echo "Downloading Maven ${MAVEN_VERSION}..."
-curl -L -o maven.tar.gz "$MAVEN_URL"
+curl -L -o mvnd.zip "$MVND_URL"
 
-file maven.tar.gz | grep -q "gzip compressed data" || {
-    echo "Download failed or invalid archive"; exit 1;
-}
+# check it's a valid zip
+if ! file mvnd.zip | grep -q "Zip archive data"; then
+  echo "Downloaded file is not a valid zip archive; aborting."
+  exit 1
+fi
 
-echo "Extracting..."
-tar -xzf maven.tar.gz
+echo "Unzipping..."
+unzip mvnd.zip
 
-# Install directory
-TARGET_BASE="$HOME/Clitools"
-TARGET_DIR="$TARGET_BASE/maven"
+# The zip unpacks to a folder, e.g. maven-mvnd-1.0.3
+DIR_NAME="maven-mvnd-1.0.3"
+TARGET="$HOME/Clitools/mvnd"
 
-mkdir -p "$TARGET_BASE"
-rm -rf "$TARGET_DIR"
+mkdir -p "$HOME/Clitools"
+rm -rf "$TARGET"
+mv "$DIR_NAME" "$TARGET"
 
-mv "apache-maven-${MAVEN_VERSION}" "$TARGET_DIR"
-
-echo "Maven installed at: $TARGET_DIR"
+echo "mvnd installed to: $TARGET"
 
 # Update .zshrc
 ZSHRC="$HOME/.zshrc"
-M2_HOME_LINE='export M2_HOME="$HOME/Clitools/maven"'
-MAVEN_PATH_LINE='export PATH="$M2_HOME/bin:$PATH"'
+EXPORT_LINE="export PATH=\"$TARGET/bin:\$PATH\""
 
-if ! grep -q 'Clitools/maven' "$ZSHRC"; then
-    echo "" >> "$ZSHRC"
-    echo "# Maven setup added by installer" >> "$ZSHRC"
-    echo "$M2_HOME_LINE" >> "$ZSHRC"
-    echo "$MAVEN_PATH_LINE" >> "$ZSHRC"
-    echo ".zshrc updated."
+if ! grep -q "Clitools/mvnd" "$ZSHRC"; then
+  echo "" >> "$ZSHRC"
+  echo "# Added by mvnd installer" >> "$ZSHRC"
+  echo "$EXPORT_LINE" >> "$ZSHRC"
+  echo ".zshrc updated with mvnd path."
 else
-    echo ".zshrc already contains Maven path. Skipped."
+  echo ".zshrc already has mvnd path — skipping."
 fi
 
 # Cleanup
 cd ~
 rm -rf "$TMP"
 
-echo "Done. Run: source ~/.zshrc"
+echo "Installation complete. Run: source ~/.zshrc"
