@@ -1,59 +1,37 @@
-#!/bin/zsh
-set -e
+#!/bin/sh
 
-# Detect architecture
 ARCH=$(uname -m)
-if [ "$ARCH" = "x86_64" ]; then
-  MVND_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-amd64.zip"
-elif [ "$ARCH" = "arm64" ]; then
-  MVND_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-aarch64.zip"
-else
-  echo "Unsupported architecture: $ARCH"
-  exit 1
-fi
-
 echo "Detected architecture: $ARCH"
-echo "Downloading mvnd from: $MVND_URL"
 
-TMP=$(mktemp -d)
-cd "$TMP"
-
-curl -L -o mvnd.zip "$MVND_URL"
-
-# check it's a valid zip
-if ! file mvnd.zip | grep -q "Zip archive data"; then
-  echo "Downloaded file is not a valid zip archive; aborting."
-  exit 1
+if [ "$ARCH" = "arm64" ]; then
+    DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-aarch64.zip"
+else
+    DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-amd64.zip"
 fi
+
+echo "Downloading mvnd from: $DOWNLOAD_URL"
+curl -L -o mvnd.zip "$DOWNLOAD_URL"
 
 echo "Unzipping..."
-unzip mvnd.zip
+unzip -q mvnd.zip
 
-# The zip unpacks to a folder, e.g. maven-mvnd-1.0.3
-DIR_NAME="maven-mvnd-1.0.3"
-TARGET="$HOME/Clitools/mvnd"
+# Set directory paths
+BASE_DIR="$HOME/Clitools"
+MAVEN_DIR="$BASE_DIR/mvnd"
 
-mkdir -p "$HOME/Clitools"
-rm -rf "$TARGET"
-mv "$DIR_NAME" "$TARGET"
+# Create required directories
+mkdir -p "$MAVEN_DIR"
 
-echo "mvnd installed to: $TARGET"
+# Move the extracted folder
+mv maven-mvnd-1.0.3* "$MAVEN_DIR"
 
-# Update .zshrc
-ZSHRC="$HOME/.zshrc"
-EXPORT_LINE="export PATH=\"$TARGET/bin:\$PATH\""
-
-if ! grep -q "Clitools/mvnd" "$ZSHRC"; then
-  echo "" >> "$ZSHRC"
-  echo "# Added by mvnd installer" >> "$ZSHRC"
-  echo "$EXPORT_LINE" >> "$ZSHRC"
-  echo ".zshrc updated with mvnd path."
-else
-  echo ".zshrc already has mvnd path — skipping."
+# Update PATH automatically
+if ! grep -q 'Clitools/mvnd/bin' ~/.zshrc; then
+    echo "\n# Maven mvnd path" >> ~/.zshrc
+    echo "export PATH=\"\$PATH:$MAVEN_DIR/bin\"" >> ~/.zshrc
 fi
 
-# Cleanup
-cd ~
-rm -rf "$TMP"
+echo "Cleaning up..."
+rm mvnd.zip
 
-echo "Installation complete. Run: source ~/.zshrc"
+echo "Installation complete. Restart your terminal or run: source ~/.zshrc"
