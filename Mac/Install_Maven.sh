@@ -15,23 +15,26 @@ curl -L -o mvnd.zip "$DOWNLOAD_URL"
 echo "Unzipping..."
 unzip -q mvnd.zip
 
-# Set directory paths
+# Define install paths
 BASE_DIR="$HOME/Clitools"
 MAVEN_DIR="$BASE_DIR/mvnd"
 
 # Create required directories
 mkdir -p "$MAVEN_DIR"
 
-# Move the extracted folder
-mv maven-mvnd-1.0.3* "$MAVEN_DIR"
+# Move extracted folder
+EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "maven-mvnd-1.0.3*")
+mv "$EXTRACTED_DIR" "$MAVEN_DIR"
 
-# Update PATH automatically
-if ! grep -q 'Clitools/mvnd/bin' ~/.zshrc; then
-    echo "\n# Maven mvnd path" >> ~/.zshrc
-    echo "export PATH=\"\$PATH:$MAVEN_DIR/bin\"" >> ~/.zshrc
+# Add the mvn and mvnd binaries to PATH
+if ! grep -q "Clitools/mvnd" ~/.zshrc; then
+    echo "\n# mvnd + maven path" >> ~/.zshrc
+    echo "export PATH=\"\$PATH:$MAVEN_DIR/maven-mvnd-1.0.3-darwin-amd64/mvn/bin\"" >> ~/.zshrc
+    echo "export PATH=\"\$PATH:$MAVEN_DIR/maven-mvnd-1.0.3-darwin-amd64/bin\"" >> ~/.zshrc
 fi
 
 echo "Cleaning up..."
 rm mvnd.zip
 
-echo "Installation complete. Restart your terminal or run: source ~/.zshrc"
+echo "Installation complete!"
+echo "Run: source ~/.zshrc"
