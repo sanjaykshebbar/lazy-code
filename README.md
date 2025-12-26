@@ -20,3 +20,8 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Install_Maven.sh | sh
 ```
 ---
+* ### Install Minikube on MacOS (Silicon) (No Sudo, No Homebew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Minikube_Silicon_Install.sh | sh
+```
+---
