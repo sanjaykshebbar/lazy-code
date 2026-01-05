@@ -25,3 +25,8 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/Minikube_Silicon_Install.sh | sh
 ```
 ---
+* ### Install Redis on MacOS (Silicon & Intel) (No Sudo, No Homebew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-redis.sh | sh
+```
+---
