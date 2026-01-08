@@ -5,107 +5,147 @@
 # GitHub  : https://github.com/sanjaykshebbar/Automation
 #
 # What does this code do:
-# - Downloads and installs Ruby 3.x from source in user space
-# - Installs CocoaPods using the locally installed Ruby
-# - Configures PATH so pod command is available globally for the user
-# - Works without sudo and without Homebrew on macOS
+# - Builds OpenSSL in user space
+# - Builds libyaml in user space
+# - Builds Ruby 3.x linked against OpenSSL & libyaml
+# - Installs CocoaPods using the local Ruby
+# - Configures PATH correctly
+# - No sudo, no Homebrew, works on Intel & Apple Silicon macOS
 ###############################################################################
 
 set -e
 
 # ----------------------------- #
-# Step 1: Variables             #
+# Versions (pin explicitly)     #
+# ----------------------------- #
+
+RUBY_VERSION="3.3.0"
+OPENSSL_VERSION="3.2.1"
+LIBYAML_VERSION="0.2.5"
+
+# ----------------------------- #
+# Directories                   #
 # ----------------------------- #
 
 BASE_DIR="$HOME/CLI/cocoapods"
-RUBY_VERSION="3.3.0"
+SRC_DIR="$BASE_DIR/src"
+OPENSSL_PREFIX="$BASE_DIR/openssl"
+LIBYAML_PREFIX="$BASE_DIR/libyaml"
 RUBY_PREFIX="$BASE_DIR/ruby"
-TMP_DIR="$(mktemp -d)"
 
-RUBY_TAR="ruby-$RUBY_VERSION.tar.gz"
-RUBY_URL="https://cache.ruby-lang.org/pub/ruby/3.3/$RUBY_TAR"
+mkdir -p "$SRC_DIR"
 
 # ----------------------------- #
-# Step 2: Dependency checks     #
+# Toolchain check               #
 # ----------------------------- #
 
-for cmd in curl tar make gcc; do
-  if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "ERROR: Required command '$cmd' not found. Install Xcode Command Line Tools."
+for cmd in curl make clang tar; do
+  command -v "$cmd" >/dev/null || {
+    echo "ERROR: $cmd not found. Install Xcode Command Line Tools."
     exit 1
-  fi
+  }
 done
 
 # ----------------------------- #
-# Step 3: Directory setup       #
+# Build OpenSSL                 #
 # ----------------------------- #
 
-mkdir -p "$BASE_DIR"
+cd "$SRC_DIR"
+
+if [[ ! -d "$OPENSSL_PREFIX" ]]; then
+  echo "Building OpenSSL $OPENSSL_VERSION..."
+  curl -LO "https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz"
+  tar -xzf "openssl-$OPENSSL_VERSION.tar.gz"
+  cd "openssl-$OPENSSL_VERSION"
+
+  ./Configure darwin64-$(uname -m)-cc \
+    --prefix="$OPENSSL_PREFIX" \
+    no-shared
+
+  make -j"$(sysctl -n hw.ncpu)"
+  make install_sw
+fi
 
 # ----------------------------- #
-# Step 4: Download Ruby         #
+# Build libyaml                 #
 # ----------------------------- #
 
-echo "Downloading Ruby $RUBY_VERSION..."
-cd "$TMP_DIR"
-curl -fLO "$RUBY_URL"
+cd "$SRC_DIR"
+
+if [[ ! -d "$LIBYAML_PREFIX" ]]; then
+  echo "Building libyaml $LIBYAML_VERSION..."
+  curl -LO "https://pyyaml.org/download/libyaml/yaml-$LIBYAML_VERSION.tar.gz"
+  tar -xzf "yaml-$LIBYAML_VERSION.tar.gz"
+  cd "yaml-$LIBYAML_VERSION"
+
+  ./configure --prefix="$LIBYAML_PREFIX"
+  make -j"$(sysctl -n hw.ncpu)"
+  make install
+fi
 
 # ----------------------------- #
-# Step 5: Build Ruby            #
+# Build Ruby                    #
 # ----------------------------- #
 
-echo "Building Ruby..."
-tar -xzf "$RUBY_TAR"
-cd "ruby-$RUBY_VERSION"
+cd "$SRC_DIR"
 
-./configure --prefix="$RUBY_PREFIX"
-make -j"$(sysctl -n hw.ncpu)"
-make install
+if [[ ! -d "$RUBY_PREFIX" ]]; then
+  echo "Building Ruby $RUBY_VERSION..."
+  curl -LO "https://cache.ruby-lang.org/pub/ruby/3.3/ruby-$RUBY_VERSION.tar.gz"
+  tar -xzf "ruby-$RUBY_VERSION.tar.gz"
+  cd "ruby-$RUBY_VERSION"
+
+  ./configure \
+    --prefix="$RUBY_PREFIX" \
+    --with-openssl-dir="$OPENSSL_PREFIX" \
+    --with-libyaml-dir="$LIBYAML_PREFIX"
+
+  make -j"$(sysctl -n hw.ncpu)"
+  make install
+fi
 
 # ----------------------------- #
-# Step 6: Configure PATH        #
+# PATH configuration            #
 # ----------------------------- #
 
 RUBY_BIN="$RUBY_PREFIX/bin"
 
 if [[ -f "$HOME/.zshrc" ]]; then
-  SHELL_RC="$HOME/.zshrc"
+  RC="$HOME/.zshrc"
 elif [[ -f "$HOME/.bashrc" ]]; then
-  SHELL_RC="$HOME/.bashrc"
+  RC="$HOME/.bashrc"
 else
-  SHELL_RC="$HOME/.profile"
+  RC="$HOME/.profile"
 fi
 
-if ! grep -q "$RUBY_BIN" "$SHELL_RC"; then
-  echo "" >> "$SHELL_RC"
-  echo "# Ruby & CocoaPods (user-local)" >> "$SHELL_RC"
-  echo "export PATH=\"$RUBY_BIN:\$PATH\"" >> "$SHELL_RC"
+if ! grep -q "$RUBY_BIN" "$RC"; then
+  echo "" >> "$RC"
+  echo "# Ruby & CocoaPods (user space)" >> "$RC"
+  echo "export PATH=\"$RUBY_BIN:\$PATH\"" >> "$RC"
 fi
 
 export PATH="$RUBY_BIN:$PATH"
 
 # ----------------------------- #
-# Step 7: Install CocoaPods     #
+# Install CocoaPods             #
 # ----------------------------- #
 
 echo "Installing CocoaPods..."
-gem update --system
+gem update --system --no-document
 gem install cocoapods --no-document
 
 # ----------------------------- #
-# Step 8: Cleanup               #
+# Verification                  #
 # ----------------------------- #
 
-rm -rf "$TMP_DIR"
-
-# ----------------------------- #
-# Step 9: Verification          #
-# ----------------------------- #
-
-echo "Ruby version:"
+echo "Ruby:"
 ruby --version
 
-echo "CocoaPods version:"
-pod --version
+echo "OpenSSL:"
+ruby -ropenssl -e 'puts OpenSSL::OPENSSL_VERSION'
 
-echo "CocoaPods installed successfully in user space."
+echo "YAML:"
+ruby -ryaml -e 'puts YAML::VERSION'
+
+echo "CocoaPods:"
+pod --version
