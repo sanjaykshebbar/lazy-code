@@ -30,3 +30,8 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-redis.sh | sh
 ```
 ---
+* ### Install Allure on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-allure-macos.sh | sh
+```
+---
