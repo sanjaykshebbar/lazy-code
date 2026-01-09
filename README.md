@@ -35,3 +35,8 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-allure-macos.sh | sh
 ```
 ---
+* ### Install Cocoapods on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
+```
+* curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-cocoapods-macos.sh| sh
+```
+---
