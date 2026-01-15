@@ -40,3 +40,9 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-cocoapods-macos.sh| sh
 ```
 ---
+* ### Install NVM on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-nvm-macos.sh| sh
+```
+---
+
