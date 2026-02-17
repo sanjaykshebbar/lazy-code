@@ -42,14 +42,19 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 ---
 * ### Install NVM on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
 ```
-curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-nvm-macos.sh| sh
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-nvm-macos.sh | sh
 ```
 ---
 * ### Install DBT on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
 ```
-curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-dbt-macos.sh| sh
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-dbt-macos.sh | sh
 ```
 ---
+* ### Install ClaudCode CLI on MacOS (Silicon & Intel) (No Sudo, Now Homebrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Install_claud_code_cli.sh | sh
+```
+
 
 
 
