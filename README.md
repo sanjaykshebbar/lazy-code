@@ -54,6 +54,11 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Install_claud_code_cli.sh | sh
 ```
+---
+* ### Install Autoconf on MacOS (Silicon & Intel) (No Sudo, No Homebrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-autoconf.sh | sh
+```
 
 
 
