@@ -1,23 +1,34 @@
 #!/bin/bash
 
-# ==========================================
-# Clawbot / OpenClaw Installation Script
-# CentOS
-# ==========================================
+# =====================================================
+# Clawbot / OpenClaw Full Auto Installer
+# CentOS / RHEL / Rocky / Alma
+# Author: Sanjay KS
+# =====================================================
 
 set -e
 
-echo "--------------------------------------"
-echo " Updating system packages"
-echo "--------------------------------------"
+INSTALL_DIR="/opt/clawbot"
+REPO_URL="https://github.com/openclaw/openclaw.git"
+SERVICE_NAME="clawbot"
 
-sudo yum update -y
+echo "========================================"
+echo " Clawbot Automated Installation"
+echo "========================================"
 
-echo "--------------------------------------"
-echo " Installing required dependencies"
-echo "--------------------------------------"
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root or with sudo"
+  exit
+fi
 
-sudo yum install -y \
+echo ""
+echo "Updating system..."
+yum update -y
+
+echo ""
+echo "Installing dependencies..."
+
+yum install -y \
 git \
 python3 \
 python3-pip \
@@ -26,60 +37,100 @@ gcc \
 gcc-c++ \
 make \
 curl \
-wget
+wget \
+epel-release
 
-echo "--------------------------------------"
-echo " Installing NodeJS (Required for some modules)"
-echo "--------------------------------------"
+echo ""
+echo "Installing NodeJS..."
 
-curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-sudo yum install -y nodejs
+curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
+yum install -y nodejs
 
-echo "--------------------------------------"
-echo " Creating Clawbot directory"
-echo "--------------------------------------"
+echo ""
+echo "Creating installation directory..."
 
-sudo mkdir -p /opt/clawbot
-sudo chown $USER:$USER /opt/clawbot
+mkdir -p $INSTALL_DIR
+cd $INSTALL_DIR
 
-cd /opt/clawbot
+if [ -d "$INSTALL_DIR/openclaw" ]; then
+    echo "Existing installation detected. Removing..."
+    rm -rf $INSTALL_DIR/openclaw
+fi
 
-echo "--------------------------------------"
-echo " Cloning OpenClaw Repository"
-echo "--------------------------------------"
+echo ""
+echo "Cloning OpenClaw repository..."
 
-git clone https://github.com/openclaw/openclaw.git
-
+git clone $REPO_URL
 cd openclaw
 
-echo "--------------------------------------"
-echo " Creating Python virtual environment"
-echo "--------------------------------------"
+echo ""
+echo "Setting up Python virtual environment..."
 
 python3 -m venv venv
 source venv/bin/activate
 
-echo "--------------------------------------"
-echo " Installing Python dependencies"
-echo "--------------------------------------"
+echo ""
+echo "Installing Python dependencies..."
 
 pip install --upgrade pip
 pip install -r requirements.txt
 
-echo "--------------------------------------"
-echo " Creating environment configuration"
-echo "--------------------------------------"
+echo ""
+echo "Configuring environment file..."
 
-cp .env.example .env
+if [ -f ".env.example" ]; then
+    cp .env.example .env
+fi
 
 echo ""
-echo "--------------------------------------"
+echo "Creating systemd service..."
+
+cat <<EOF > /etc/systemd/system/$SERVICE_NAME.service
+[Unit]
+Description=Clawbot AI Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$INSTALL_DIR/openclaw
+ExecStart=$INSTALL_DIR/openclaw/venv/bin/python main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo ""
+echo "Reloading systemd..."
+
+systemctl daemon-reload
+
+echo ""
+echo "Enabling service..."
+
+systemctl enable $SERVICE_NAME
+
+echo ""
+echo "Starting Clawbot service..."
+
+systemctl start $SERVICE_NAME
+
+echo ""
+echo "========================================"
 echo " Installation Completed"
-echo "--------------------------------------"
+echo "========================================"
 echo ""
-echo "To start Clawbot:"
+echo "Service Status:"
+systemctl status $SERVICE_NAME --no-pager
+
 echo ""
-echo "cd /opt/clawbot/openclaw"
-echo "source venv/bin/activate"
-echo "python main.py"
+echo "Commands:"
+echo "Start   : sudo systemctl start $SERVICE_NAME"
+echo "Stop    : sudo systemctl stop $SERVICE_NAME"
+echo "Restart : sudo systemctl restart $SERVICE_NAME"
+echo "Logs    : sudo journalctl -u $SERVICE_NAME -f"
 echo ""
+echo "Installation Path:"
+echo "$INSTALL_DIR/openclaw"
