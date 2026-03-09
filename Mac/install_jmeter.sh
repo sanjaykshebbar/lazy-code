@@ -4,13 +4,15 @@
 # Author  - Sanjay KS
 # Email   - sanjaykshebbar@gmail.com
 # GitHub  - https://github.com/sanjaykshebbar/Automation
+#
 # What does this code do:
 # This script installs Apache JMeter on macOS inside the $HOME/CLI directory.
+#
 # Actions performed:
 # 1. Creates CLI directory in user's home folder if it does not exist.
-# 2. Downloads the latest stable Apache JMeter binary from Apache mirrors.
+# 2. Downloads the Apache JMeter binary from Apache mirrors.
 # 3. Extracts the archive inside $HOME/CLI.
-# 4. Creates a symbolic link called "jmeter" pointing to the installed version.
+# 4. Renames the extracted version folder (apache-jmeter-x.x.x) to "jmeter".
 # 5. Adds $HOME/CLI/jmeter/bin to PATH for easier command execution.
 # 6. Verifies installation by printing the installed JMeter version.
 #
@@ -28,11 +30,14 @@ set -e
 # Installation directory
 INSTALL_DIR="$HOME/CLI"
 
-# Apache JMeter download URL (latest stable)
-JMETER_URL="https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.6.3.tgz"
+# Apache JMeter download URL
+JMETER_URL="https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz"
 
-# Temporary download location
+# Temporary file location
 TMP_FILE="/tmp/apache-jmeter.tgz"
+
+# Final installation folder
+FINAL_DIR="$INSTALL_DIR/jmeter"
 
 #############################################
 # Step 1 — Create CLI directory
@@ -51,29 +56,40 @@ echo "Downloading Apache JMeter..."
 curl -L "$JMETER_URL" -o "$TMP_FILE"
 
 #############################################
-# Step 3 — Extract JMeter
+# Step 3 — Detect folder name inside archive
 #############################################
 
-echo "Extracting JMeter to $INSTALL_DIR ..."
-
-tar -xzf "$TMP_FILE" -C "$INSTALL_DIR"
-
-#############################################
-# Step 4 — Detect extracted directory
-#############################################
+echo "Detecting JMeter extracted folder..."
 
 JMETER_FOLDER=$(tar -tzf "$TMP_FILE" | head -1 | cut -f1 -d"/")
 
 #############################################
-# Step 5 — Create symlink for easy access
+# Step 4 — Extract JMeter
 #############################################
 
-echo "Creating symbolic link..."
+echo "Extracting JMeter..."
 
-ln -sf "$INSTALL_DIR/$JMETER_FOLDER" "$INSTALL_DIR/jmeter"
+tar -xzf "$TMP_FILE" -C "$INSTALL_DIR"
 
 #############################################
-# Step 6 — Add to PATH if not already present
+# Step 5 — Remove old installation if exists
+#############################################
+
+if [ -d "$FINAL_DIR" ]; then
+    echo "Existing JMeter installation detected. Removing old version..."
+    rm -rf "$FINAL_DIR"
+fi
+
+#############################################
+# Step 6 — Rename extracted folder
+#############################################
+
+echo "Renaming extracted folder to 'jmeter'..."
+
+mv "$INSTALL_DIR/$JMETER_FOLDER" "$FINAL_DIR"
+
+#############################################
+# Step 7 — Add JMeter to PATH if not present
 #############################################
 
 SHELL_RC="$HOME/.zshrc"
@@ -84,13 +100,13 @@ if ! grep -q 'export PATH="$HOME/CLI/jmeter/bin:$PATH"' "$SHELL_RC"; then
 fi
 
 #############################################
-# Step 7 — Load updated PATH
+# Step 8 — Load PATH for current session
 #############################################
 
 export PATH="$HOME/CLI/jmeter/bin:$PATH"
 
 #############################################
-# Step 8 — Verify installation
+# Step 9 — Verify Installation
 #############################################
 
 echo "Verifying installation..."
@@ -98,13 +114,19 @@ echo "Verifying installation..."
 jmeter --version
 
 #############################################
-# Step 9 — Cleanup
+# Step 10 — Cleanup
 #############################################
+
+echo "Cleaning temporary files..."
 
 rm -f "$TMP_FILE"
 
+#############################################
+# Completion Message
+#############################################
+
 echo ""
-echo "Apache JMeter installation completed."
-echo "Installation Path: $INSTALL_DIR/jmeter"
-echo "Run using command: jmeter"
+echo "Apache JMeter installation completed successfully."
+echo "Installation Path: $FINAL_DIR"
+echo "Run JMeter using: jmeter"
 echo ""
