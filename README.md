@@ -59,7 +59,10 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/install-autoconf.sh | sh
 ```
-
+* ### Install Claude-CLI on MacOS (No Sudo, No HomeBrew)
+```
+curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/claudcodecli.sh | sh
+```
 
 
 
