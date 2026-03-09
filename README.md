@@ -63,8 +63,10 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads
 ```
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/Mac/claudcodecli.sh | sh
 ```
-
-
+* ### Install Jmeter CLI on MacOS (No Sudo, No Homebrew)
+```
+curl -fsSL https://github.com/sanjaykshebbar/lazy-code/blob/main/Mac/install_jmeter.sh | sh
+```
 
 
 
