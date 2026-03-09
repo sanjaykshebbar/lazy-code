@@ -4,10 +4,8 @@
 # Author  - Sanjay KS
 # Email   - sanjaykshebbar@gmail.com
 # GitHub  - https://github.com/sanjaykshebbar/Automation
-#
 # What does this code do:
 # This script installs Apache JMeter on macOS inside the $HOME/CLI directory.
-#
 # Actions performed:
 # 1. Creates CLI directory in user's home folder if it does not exist.
 # 2. Downloads the latest stable Apache JMeter binary from Apache mirrors.
