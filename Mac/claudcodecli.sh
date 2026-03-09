@@ -11,12 +11,10 @@ fi
 
 GCS_BUCKET="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
 
-INSTALL_DIR="$HOME/.local/claude"
-BIN_DIR="$HOME/.local/bin"
-DOWNLOAD_DIR="$HOME/.claude/downloads"
+INSTALL_DIR="$HOME/CLI"
+DOWNLOAD_DIR="$HOME/CLI/.downloads"
 
 mkdir -p "$INSTALL_DIR"
-mkdir -p "$BIN_DIR"
 mkdir -p "$DOWNLOAD_DIR"
 
 # Detect downloader
@@ -29,7 +27,7 @@ else
     exit 1
 fi
 
-# Optional jq
+# jq optional
 HAS_JQ=false
 command -v jq >/dev/null 2>&1 && HAS_JQ=true
 
@@ -86,7 +84,7 @@ fi
 
 platform="${os}-${arch}"
 
-# Fetch latest version
+# Get latest version
 version=$(download_file "$GCS_BUCKET/latest")
 
 manifest_json=$(download_file "$GCS_BUCKET/$version/manifest.json")
@@ -117,24 +115,16 @@ fi
 
 chmod +x "$binary_path"
 
-# Move binary to user install dir
 mv "$binary_path" "$INSTALL_DIR/claude"
 
-# Create launcher in ~/.local/bin
-ln -sf "$INSTALL_DIR/claude" "$BIN_DIR/claude"
-
-# Ensure PATH exists
-if ! echo "$PATH" | grep -q "$BIN_DIR"; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
-fi
+rm -rf "$DOWNLOAD_DIR"
 
 echo ""
-echo "Installation complete (no sudo required)"
+echo "Installation complete."
 echo ""
-echo "Restart terminal or run:"
+echo "Binary installed at:"
+echo "$HOME/CLI/claude"
 echo ""
-echo "source ~/.zshrc"
-echo ""
-echo "Then run:"
-echo ""
-echo "claude"
+
+echo "To run:"
+echo "$HOME/CLI/claude"
