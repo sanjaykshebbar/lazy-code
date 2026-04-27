@@ -3,6 +3,8 @@
 Lazy Code is a collection of lightweight scripts designed to simplify installation, cleanup, and environment setup on **Ubuntu** and **macOS** systems.  
 These scripts reduce manual steps, maintain consistency, and save valuable setup time.
 
+For Intune scripts try [this](https://github.com/sanjaykshebbar/lazy-code/blob/main/Mac/IntuneScripts/Intune_Scripts_readme.md)
+
 ---
 * #### Install k9s on macOS (No Sudo, No Homebrew)
 ```
