@@ -13,19 +13,19 @@
 # 1. Supports both Intel and Apple Silicon (M1/M2/M3) Macs
 # 2. Installs FVM inside:
 #       $HOME/cli/fvm
-# 3. Automatically detects shell type
-# 4. Automatically updates ~/.zshrc
-# 5. Adds Dart pub cache binary path
-# 6. Verifies installation after setup
-# 7. Works fully in user-space without sudo
+# 3. Automatically updates ~/.zshrc
+# 4. Automatically reloads shell configuration
+# 5. Adds FVM binary path automatically
+# 6. Performs installation validation
+# 7. Works fully in user-space without sudo access
 #
 # Requirements:
 # - Internet connection
-# - curl installed
+# - Dart SDK installed
 #
 ####################################################################################################
 
-# Exit immediately if a command exits with non-zero status
+# Exit script immediately if any command fails
 set -e
 
 ########################################
@@ -33,7 +33,7 @@ set -e
 ########################################
 
 INSTALL_DIR="$HOME/cli/fvm"
-DART_SDK_DIR="$HOME/.pub-cache/bin"
+PUB_CACHE_DIR="$INSTALL_DIR/pub-cache"
 ZSHRC_FILE="$HOME/.zshrc"
 
 ########################################
@@ -61,80 +61,89 @@ if [[ "$ARCH" == "arm64" ]]; then
 elif [[ "$ARCH" == "x86_64" ]]; then
     echo "Intel Mac detected"
 else
-    echo "Unsupported architecture: $ARCH"
+    echo "Unsupported architecture detected: $ARCH"
     exit 1
 fi
 
 ########################################
-# CHECK IF DART EXISTS
+# CHECK DART INSTALLATION
 ########################################
 
 echo "=================================================="
-echo "Checking if Dart SDK exists..."
+echo "Checking Dart SDK..."
 echo "=================================================="
 
 if command -v dart >/dev/null 2>&1; then
-    echo "Dart is already installed."
+    echo "Dart SDK detected."
 else
-    echo "Dart SDK not found."
+    echo "ERROR: Dart SDK not found."
     echo ""
-    echo "FVM requires Dart SDK."
+    echo "FVM requires Dart SDK to be installed first."
     echo ""
-    echo "Install Flutter manually first OR"
-    echo "install Dart SDK in user-space."
-    echo ""
-    echo "Official Dart SDK:"
+    echo "Install Dart SDK from:"
     echo "https://dart.dev/get-dart"
     exit 1
 fi
 
 ########################################
-# INSTALL FVM USING DART PUB
+# CONFIGURE PUB CACHE
+########################################
+
+echo "=================================================="
+echo "Configuring Pub Cache..."
+echo "=================================================="
+
+mkdir -p "$PUB_CACHE_DIR"
+
+export PUB_CACHE="$PUB_CACHE_DIR"
+
+########################################
+# INSTALL FVM
 ########################################
 
 echo "=================================================="
 echo "Installing FVM..."
 echo "=================================================="
 
-PUB_CACHE="$INSTALL_DIR/pub-cache"
-
-mkdir -p "$PUB_CACHE"
-
-export PUB_CACHE="$PUB_CACHE"
-
 dart pub global activate fvm
 
 ########################################
-# VERIFY INSTALLATION
+# VERIFY FVM BINARY
 ########################################
 
-FVM_BINARY="$PUB_CACHE/bin/fvm"
+FVM_BINARY="$PUB_CACHE_DIR/bin/fvm"
 
 if [[ ! -f "$FVM_BINARY" ]]; then
-    echo "FVM installation failed."
+    echo "ERROR: FVM installation failed."
     exit 1
 fi
 
-echo "FVM installed successfully."
+echo "FVM installation completed."
 
 ########################################
-# UPDATE ZSHRC
+# UPDATE .ZSHRC
 ########################################
 
 echo "=================================================="
 echo "Updating ~/.zshrc..."
 echo "=================================================="
 
-FVM_PATH_EXPORT="export PATH=\"$PUB_CACHE/bin:\$PATH\""
+FVM_PATH='export PATH="$HOME/cli/fvm/pub-cache/bin:$PATH"'
 
-# Prevent duplicate entries
-if grep -Fxq "$FVM_PATH_EXPORT" "$ZSHRC_FILE"; then
-    echo "PATH entry already exists in .zshrc"
+# Create .zshrc if it does not exist
+touch "$ZSHRC_FILE"
+
+# Prevent duplicate PATH entries
+if grep -Fxq "$FVM_PATH" "$ZSHRC_FILE"; then
+    echo "FVM PATH already exists in .zshrc"
 else
-    echo "" >> "$ZSHRC_FILE"
-    echo "# FVM PATH" >> "$ZSHRC_FILE"
-    echo "$FVM_PATH_EXPORT" >> "$ZSHRC_FILE"
-    echo "Added FVM path to .zshrc"
+    {
+        echo ""
+        echo "# FVM PATH"
+        echo "$FVM_PATH"
+    } >> "$ZSHRC_FILE"
+
+    echo "FVM PATH added to .zshrc"
 fi
 
 ########################################
@@ -142,15 +151,20 @@ fi
 ########################################
 
 echo "=================================================="
-echo "Reloading shell configuration..."
+echo "Reloading ~/.zshrc..."
 echo "=================================================="
 
-export PATH="$PUB_CACHE/bin:$PATH"
-
+# Load updated shell configuration
 source "$ZSHRC_FILE"
 
 ########################################
-# FINAL VALIDATION
+# EXPORT PATH FOR CURRENT SESSION
+########################################
+
+export PATH="$HOME/cli/fvm/pub-cache/bin:$PATH"
+
+########################################
+# VALIDATE INSTALLATION
 ########################################
 
 echo "=================================================="
@@ -159,29 +173,30 @@ echo "=================================================="
 
 if command -v fvm >/dev/null 2>&1; then
     echo ""
-    echo "FVM installed successfully!"
+    echo "FVM installed successfully."
     echo ""
+    echo "Installed Version:"
     fvm --version
 else
-    echo "FVM command not found after installation."
+    echo "ERROR: FVM command not found."
     exit 1
 fi
 
 ########################################
-# INSTALL LOCATION INFO
+# DISPLAY INSTALLATION DETAILS
 ########################################
 
 echo ""
 echo "=================================================="
 echo "INSTALLATION DETAILS"
 echo "=================================================="
-echo "FVM Install Location : $INSTALL_DIR"
-echo "Pub Cache Location   : $PUB_CACHE"
-echo "Shell Config File    : $ZSHRC_FILE"
+echo "Install Directory : $INSTALL_DIR"
+echo "Pub Cache Path    : $PUB_CACHE_DIR"
+echo "Shell Config File : $ZSHRC_FILE"
 echo "=================================================="
 echo ""
 
-echo "You may now use:"
+echo "Usage Examples:"
 echo "fvm install stable"
 echo "fvm use stable"
 echo ""
