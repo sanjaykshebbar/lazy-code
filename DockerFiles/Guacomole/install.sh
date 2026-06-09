@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-COMPOSE_URL="https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/refs/heads/main/DockerFiles/Guacomole/docker-compose.yml"
+COMPOSE_URL="https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/DockerFiles/Guacomole/docker-compose.yml"
+SCHEMA_URL="https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/DockerFiles/Guacomole/initdb.sql"
+
 INSTALL_DIR="$HOME/.guacamole-installer"
 
 echo "[1/9] Checking Docker..."
@@ -21,16 +23,17 @@ echo "ERROR: Docker Compose not found."
 exit 1
 fi
 
-echo "[2/9] Creating installation directory..."
+echo "[2/9] Creating install directory..."
 
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-echo "[3/9] Downloading docker-compose.yml..."
+echo "[3/9] Downloading required files..."
 
 curl -fsSL "$COMPOSE_URL" -o docker-compose.yml
+curl -fsSL "$SCHEMA_URL" -o initdb.sql
 
-echo "[4/9] Pulling required Docker images..."
+echo "[4/9] Pulling Docker images..."
 
 docker pull mysql:8.0
 docker pull guacamole/guacamole:latest
@@ -39,7 +42,7 @@ echo "[5/9] Starting MySQL..."
 
 $COMPOSE up -d mysql
 
-echo "[6/9] Waiting for MySQL to become healthy..."
+echo "[6/9] Waiting for MySQL..."
 
 for i in {1..60}; do
 if docker exec guac-mysql mysqladmin ping -uroot -prootpassword --silent >/dev/null 2>&1; then
@@ -49,7 +52,7 @@ fi
 
 ```
 if [ "$i" -eq 60 ]; then
-    echo "ERROR: MySQL failed to start."
+    echo "ERROR: Timed out waiting for MySQL."
     exit 1
 fi
 
@@ -58,14 +61,10 @@ sleep 5
 
 done
 
-echo "[7/9] Initializing Guacamole database schema..."
-
-docker run --rm 
-guacamole/guacamole 
-/opt/guacamole/bin/initdb.sh --mysql > initdb.sql
+echo "[7/9] Importing Guacamole schema..."
 
 docker exec -i guac-mysql 
-mysql -uroot -prootpassword guacamole_db < initdb.sql || true
+mysql -uroot -prootpassword guacamole_db < initdb.sql
 
 echo "[8/9] Starting Guacamole..."
 
@@ -74,7 +73,7 @@ $COMPOSE up -d guacamole
 echo "Waiting for Guacamole startup..."
 sleep 20
 
-echo "[9/9] Setting default admin password..."
+echo "[9/9] Setting admin password..."
 
 docker exec guac-mysql mysql 
 -uroot 
@@ -93,10 +92,10 @@ PUBLIC_IP=$(hostname -I | awk '{print $1}')
 fi
 
 echo
-echo "=================================================="
-echo "Apache Guacamole installation completed"
+echo "================================================="
+echo "Guacamole installation completed successfully"
 echo
 echo "URL      : http://${PUBLIC_IP}:8080/guacamole"
 echo "Username : guacadmin"
 echo "Password : Password123"
-echo "=================================================="
+echo "================================================="
