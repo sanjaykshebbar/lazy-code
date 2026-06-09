@@ -6,56 +6,66 @@
 # GitHub  - https://github.com/sanjaykshebbar/Automation
 #
 # What does this code do:
-# - Downloads the latest Postman package for Apple Silicon Macs.
+# - Detects whether the Mac is Intel or Apple Silicon.
+# - Downloads the latest Postman package for the detected architecture.
 # - Removes any existing Postman installation.
 # - Extracts and installs Postman into /Applications.
-# - Sets appropriate ownership and permissions.
-# - Launches Postman automatically after installation.
+# - Sets appropriate permissions.
+# - Cleans up temporary files.
+# - Launches Postman after installation.
 ###############################################################################
 
-# Exit immediately if a command fails
+# Exit immediately if a command exits with a non-zero status
 set -e
 
 ###############################################################################
-# Verify that the machine is Apple Silicon
+# Define temporary locations
 ###############################################################################
-ARCH=$(uname -m)
-
-if [[ "$ARCH" != "arm64" ]]; then
-    echo "This script is intended only for Apple Silicon Macs."
-    echo "Detected architecture: $ARCH"
-    exit 1
-fi
-
-###############################################################################
-# Define variables
-###############################################################################
-POSTMAN_URL="https://dl.pstmn.io/download/latest/osx_arm64"
-TMP_FILE="/tmp/Postman.zip"
+TMP_ZIP="/tmp/Postman.zip"
 TMP_DIR="/tmp/Postman"
 
 ###############################################################################
-# Remove temporary files if they already exist
+# Detect CPU architecture and determine download URL
 ###############################################################################
-rm -rf "$TMP_FILE"
+ARCH=$(uname -m)
+
+case "$ARCH" in
+    arm64)
+        echo "Apple Silicon Mac detected."
+        POSTMAN_URL="https://dl.pstmn.io/download/latest/osx_arm64"
+        ;;
+    x86_64)
+        echo "Intel Mac detected."
+        POSTMAN_URL="https://dl.pstmn.io/download/latest/osx_64"
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
+
+###############################################################################
+# Remove old temporary files
+###############################################################################
+rm -rf "$TMP_ZIP"
 rm -rf "$TMP_DIR"
 
 ###############################################################################
 # Download the latest Postman package
 ###############################################################################
-echo "Downloading latest Postman..."
+echo "Downloading Postman..."
 
-curl -L "$POSTMAN_URL" -o "$TMP_FILE"
-
-###############################################################################
-# Extract the downloaded ZIP file
-###############################################################################
-echo "Extracting Postman..."
-
-unzip -q "$TMP_FILE" -d "$TMP_DIR"
+curl -fsSL "$POSTMAN_URL" -o "$TMP_ZIP"
 
 ###############################################################################
-# Remove any existing Postman installation
+# Extract the downloaded archive
+###############################################################################
+echo "Extracting package..."
+
+unzip -q "$TMP_ZIP" -d "$TMP_DIR"
+
+###############################################################################
+# Remove existing Postman installation if present
 ###############################################################################
 if [ -d "/Applications/Postman.app" ]; then
     echo "Removing existing Postman installation..."
@@ -63,7 +73,7 @@ if [ -d "/Applications/Postman.app" ]; then
 fi
 
 ###############################################################################
-# Copy Postman to the Applications folder
+# Install Postman
 ###############################################################################
 echo "Installing Postman..."
 
@@ -76,16 +86,15 @@ chown -R root:wheel "/Applications/Postman.app"
 chmod -R 755 "/Applications/Postman.app"
 
 ###############################################################################
-# Cleanup temporary files
+# Remove temporary files
 ###############################################################################
-rm -rf "$TMP_FILE"
+rm -rf "$TMP_ZIP"
 rm -rf "$TMP_DIR"
 
 ###############################################################################
 # Launch Postman
 ###############################################################################
 echo "Launching Postman..."
-
 open "/Applications/Postman.app"
 
 echo "Postman installation completed successfully."
