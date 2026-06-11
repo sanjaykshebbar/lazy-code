@@ -1,68 +1,47 @@
 #!/bin/bash
 
-INSTALL_DIR="$HOME/.colima_install"
-BIN_DIR="$INSTALL_DIR/bin"
-COLIMA_VERSION="v0.6.9"
+###############################################################################
+# Author - Sanjay KS
+# Email - sanjaykshebbar@gmail.com
+# GitHub - https://github.com/sanjaykshebbar/Automation
+#
+# What does this code do:
+# - Installs the latest Colima release.
+# - Supports Intel and Apple Silicon Macs.
+# - Downloads the correct binary.
+# - Installs it into /usr/local/bin.
+# - Verifies the installation.
+###############################################################################
+
+set -e
+
 ARCH=$(uname -m)
 
-detect_profile() {
-    local shell_name
-    shell_name=$(basename "$SHELL")
+case "$ARCH" in
+    arm64)
+        DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/latest/download/colima-Darwin-arm64"
+        ;;
+    x86_64)
+        DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/latest/download/colima-Darwin-x86_64"
+        ;;
+    *)
+        echo "[ERROR] Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
 
-    if [ "$shell_name" = "zsh" ]; then
-        PROFILE="$HOME/.zshrc"
-    elif [ "$shell_name" = "bash" ]; then
-        if [ -f "$HOME/.bash_profile" ]; then
-            PROFILE="$HOME/.bash_profile"
-        elif [ -f "$HOME/.bashrc" ]; then
-            PROFILE="$HOME/.bashrc"
-        else
-            PROFILE="$HOME/.bash_profile"
-        fi
-    else
-        PROFILE="$HOME/.profile"
-    fi
+TMP_FILE=$(mktemp)
 
-    [ ! -f "$PROFILE" ] && touch "$PROFILE"
-}
+echo "[INFO] Downloading Colima..."
+curl -fL "$DOWNLOAD_URL" -o "$TMP_FILE"
 
-update_path() {
-    local PATH_ENTRY="export PATH=\"\$PATH:$BIN_DIR\""
+chmod +x "$TMP_FILE"
 
-    if ! grep -q "$BIN_DIR" "$PROFILE"; then
-        echo "" >> "$PROFILE"
-        echo "# Colima PATH" >> "$PROFILE"
-        echo "$PATH_ENTRY" >> "$PROFILE"
-        echo "Added '$BIN_DIR' to PATH in $PROFILE."
-    else
-        echo "Path already contains '$BIN_DIR'. No update needed."
-    fi
-}
+echo "[INFO] Installing Colima..."
+sudo mkdir -p /usr/local/bin
+sudo mv "$TMP_FILE" /usr/local/bin/colima
 
-echo "--- Starting Colima Installation ($COLIMA_VERSION) ---"
+echo "[INFO] Verifying installation..."
+/usr/local/bin/colima version
 
-if [ "$ARCH" = "arm64" ]; then
-    BINARY_URL="https://github.com/abiosoft/colima/releases/download/$COLIMA_VERSION/colima-Darwin-arm64"
-elif [ "$ARCH" = "x86_64" ]; then
-    BINARY_URL="https://github.com/abiosoft/colima/releases/download/$COLIMA_VERSION/colima-Darwin-amd64"
-else
-    echo "ERROR: Unsupported architecture: $ARCH"
-    exit 1
-fi
-
-mkdir -p "$BIN_DIR"
-
-echo "Downloading Colima binary..."
-if ! curl -fsSL "$BINARY_URL" -o "$BIN_DIR/colima"; then
-    echo "ERROR: Failed to download Colima binary."
-    rm -rf "$INSTALL_DIR"
-    exit 1
-fi
-
-chmod +x "$BIN_DIR/colima"
-
-detect_profile
-update_path
-
-echo "--- Colima Installation Finished: $(date) ---"
-echo "NEXT STEP: Run 'source $PROFILE' or open a new terminal session."
+echo "[INFO] Colima installation completed successfully."
