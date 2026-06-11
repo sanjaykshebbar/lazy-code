@@ -1,77 +1,68 @@
-#!/bin/sh
+#!/bin/bash
 
-###############################################################################
-# Author - Sanjay KS
-# Email - sanjaykshebbar@gmail.com
-# GitHub - https://github.com/sanjaykshebbar/Automation
-#
-# What does this code do:
-# - Installs the latest version of Colima.
-# - Supports Intel and Apple Silicon Macs.
-# - Downloads the correct binary from GitHub Releases.
-# - Installs Colima into /usr/local/bin.
-###############################################################################
-
-set -e
-
-###############################################################################
-# Determine architecture.
-###############################################################################
+INSTALL_DIR="$HOME/.colima_install"
+BIN_DIR="$INSTALL_DIR/bin"
+COLIMA_VERSION="v0.6.9"
 ARCH=$(uname -m)
 
-case "$ARCH" in
-    arm64)
-        ASSET_NAME="colima-Darwin-arm64"
-        ;;
-    x86_64)
-        ASSET_NAME="colima-Darwin-x86_64"
-        ;;
-    *)
-        echo "[ERROR] Unsupported architecture: $ARCH"
-        exit 1
-        ;;
-esac
+detect_profile() {
+    local shell_name
+    shell_name=$(basename "$SHELL")
 
-echo "[INFO] Architecture: $ARCH"
+    if [ "$shell_name" = "zsh" ]; then
+        PROFILE="$HOME/.zshrc"
+    elif [ "$shell_name" = "bash" ]; then
+        if [ -f "$HOME/.bash_profile" ]; then
+            PROFILE="$HOME/.bash_profile"
+        elif [ -f "$HOME/.bashrc" ]; then
+            PROFILE="$HOME/.bashrc"
+        else
+            PROFILE="$HOME/.bash_profile"
+        fi
+    else
+        PROFILE="$HOME/.profile"
+    fi
 
-###############################################################################
-# Determine latest version.
-###############################################################################
-LATEST_VERSION=$(curl -fsSL \
-https://api.github.com/repos/abiosoft/colima/releases/latest \
-| awk -F'"' '/tag_name/{print $4}')
+    [ ! -f "$PROFILE" ] && touch "$PROFILE"
+}
 
-if [ -z "$LATEST_VERSION" ]; then
-    echo "[ERROR] Failed to determine latest version."
+update_path() {
+    local PATH_ENTRY="export PATH=\"\$PATH:$BIN_DIR\""
+
+    if ! grep -q "$BIN_DIR" "$PROFILE"; then
+        echo "" >> "$PROFILE"
+        echo "# Colima PATH" >> "$PROFILE"
+        echo "$PATH_ENTRY" >> "$PROFILE"
+        echo "Added '$BIN_DIR' to PATH in $PROFILE."
+    else
+        echo "Path already contains '$BIN_DIR'. No update needed."
+    fi
+}
+
+echo "--- Starting Colima Installation ($COLIMA_VERSION) ---"
+
+if [ "$ARCH" = "arm64" ]; then
+    BINARY_URL="https://github.com/abiosoft/colima/releases/download/$COLIMA_VERSION/colima-Darwin-arm64"
+elif [ "$ARCH" = "x86_64" ]; then
+    BINARY_URL="https://github.com/abiosoft/colima/releases/download/$COLIMA_VERSION/colima-Darwin-amd64"
+else
+    echo "ERROR: Unsupported architecture: $ARCH"
     exit 1
 fi
 
-echo "[INFO] Latest version: $LATEST_VERSION"
+mkdir -p "$BIN_DIR"
 
-###############################################################################
-# Build download URL.
-###############################################################################
-DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/download/${LATEST_VERSION}/${ASSET_NAME}"
+echo "Downloading Colima binary..."
+if ! curl -fsSL "$BINARY_URL" -o "$BIN_DIR/colima"; then
+    echo "ERROR: Failed to download Colima binary."
+    rm -rf "$INSTALL_DIR"
+    exit 1
+fi
 
-echo "[INFO] Download URL:"
-echo "$DOWNLOAD_URL"
+chmod +x "$BIN_DIR/colima"
 
-###############################################################################
-# Download binary.
-###############################################################################
-TMP_FILE=$(mktemp)
+detect_profile
+update_path
 
-curl -fL "$DOWNLOAD_URL" -o "$TMP_FILE"
-
-###############################################################################
-# Install Colima.
-###############################################################################
-sudo install -m 755 "$TMP_FILE" /usr/local/bin/colima
-
-rm -f "$TMP_FILE"
-
-###############################################################################
-# Verify installation.
-###############################################################################
-echo "[INFO] Installed version:"
-colima version
+echo "--- Colima Installation Finished: $(date) ---"
+echo "NEXT STEP: Run 'source $PROFILE' or open a new terminal session."
