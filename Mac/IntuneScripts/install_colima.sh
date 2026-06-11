@@ -1,123 +1,123 @@
-#!/bin/bash
+#!/bin/sh
 
 ###############################################################################
-# Author  - Sanjay KS
-# Email   - sanjaykshebbar@gmail.com
-# GitHub  - https://github.com/sanjaykshebbar/Automation
+# Author - Sanjay KS
+# Email - sanjayks@zeta.tech
+# GitHub - https://github.com/sanjaykshebbar/Automation
 #
 # What does this code do:
-# - Installs Colima on macOS.
+# - Installs the latest version of Colima on macOS.
 # - Supports both Intel and Apple Silicon Macs.
-# - Downloads the latest Colima release directly from GitHub.
-# - Installs Colima into /usr/local/bin.
+# - Automatically determines the latest release from GitHub.
+# - Downloads the correct binary archive.
+# - Extracts and installs the Colima binary.
 # - Verifies the installation.
-# - Starts Colima automatically if it is not already running.
 ###############################################################################
 
-# Exit immediately if a command fails.
+###############################################################################
+# Exit immediately if any command fails.
+###############################################################################
 set -e
 
 ###############################################################################
-# Function: log_info
-# Purpose:
-# Prints informational messages.
+# Function:
+# Print informational messages.
 ###############################################################################
 log_info() {
     echo "[INFO] $1"
 }
 
 ###############################################################################
-# Function: log_error
-# Purpose:
-# Prints error messages.
+# Function:
+# Print error messages.
 ###############################################################################
 log_error() {
     echo "[ERROR] $1"
 }
 
 ###############################################################################
-# Function: Detect CPU architecture
-# Purpose:
-# Determines whether the Mac is Intel or Apple Silicon.
+# Determine system architecture.
 ###############################################################################
-ARCH=$(uname -m)
+ARCH="$(uname -m)"
 
-if [[ "$ARCH" == "arm64" ]]; then
-    COLIMA_ARCH="arm64"
-elif [[ "$ARCH" == "x86_64" ]]; then
-    COLIMA_ARCH="amd64"
-else
-    log_error "Unsupported architecture: $ARCH"
-    exit 1
-fi
+case "$ARCH" in
+    arm64)
+        COLIMA_ARCH="arm64"
+        ;;
+    x86_64)
+        COLIMA_ARCH="x86_64"
+        ;;
+    *)
+        log_error "Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
 
 log_info "Detected architecture: $ARCH"
 
 ###############################################################################
-# Function: Get latest Colima version
-# Purpose:
-# Retrieves the latest release tag from GitHub.
+# Retrieve the latest release tag from GitHub.
 ###############################################################################
-log_info "Fetching latest Colima version..."
+LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/abiosoft/colima/releases/latest \
+    | grep '"tag_name"' \
+    | cut -d '"' -f4)
 
-LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/abiosoft/colima/releases/latest | \
-    grep '"tag_name"' | \
-    cut -d '"' -f 4)
-
-if [[ -z "$LATEST_VERSION" ]]; then
-    log_error "Unable to determine latest Colima version."
+if [ -z "$LATEST_VERSION" ]; then
+    log_error "Unable to determine the latest Colima version."
     exit 1
 fi
 
-log_info "Latest version: $LATEST_VERSION"
+log_info "Latest version detected: $LATEST_VERSION"
 
 ###############################################################################
-# Function: Build download URL
-# Purpose:
-# Creates the appropriate download URL based on architecture.
+# Build download URL.
 ###############################################################################
-DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/download/${LATEST_VERSION}/colima-${COLIMA_ARCH}"
+DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/download/${LATEST_VERSION}/colima-Darwin-${COLIMA_ARCH}.tar.gz"
 
 log_info "Download URL:"
 echo "$DOWNLOAD_URL"
 
 ###############################################################################
-# Function: Download Colima binary
-# Purpose:
-# Downloads the Colima executable.
+# Create a temporary directory.
 ###############################################################################
-TEMP_FILE="/tmp/colima"
+TEMP_DIR=$(mktemp -d)
 
+###############################################################################
+# Download the archive.
+###############################################################################
 log_info "Downloading Colima..."
 
-curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_FILE"
+curl -fsSL "$DOWNLOAD_URL" -o "$TEMP_DIR/colima.tar.gz"
 
 ###############################################################################
-# Function: Make binary executable
-# Purpose:
-# Grants execute permission.
+# Extract the archive.
 ###############################################################################
-chmod +x "$TEMP_FILE"
+log_info "Extracting archive..."
+
+tar -xzf "$TEMP_DIR/colima.tar.gz" -C "$TEMP_DIR"
 
 ###############################################################################
-# Function: Install binary
-# Purpose:
-# Copies Colima to /usr/local/bin.
+# Ensure installation directory exists.
 ###############################################################################
-INSTALL_DIR="/usr/local/bin"
-
-if [[ ! -d "$INSTALL_DIR" ]]; then
-    sudo mkdir -p "$INSTALL_DIR"
+if [ ! -d "/usr/local/bin" ]; then
+    sudo mkdir -p /usr/local/bin
 fi
 
-log_info "Installing Colima to $INSTALL_DIR..."
+###############################################################################
+# Install the binary.
+###############################################################################
+log_info "Installing Colima..."
 
-sudo mv "$TEMP_FILE" "${INSTALL_DIR}/colima"
+sudo mv "$TEMP_DIR/colima" /usr/local/bin/colima
+sudo chmod +x /usr/local/bin/colima
 
 ###############################################################################
-# Function: Verify installation
-# Purpose:
-# Confirms Colima is installed correctly.
+# Remove temporary files.
+###############################################################################
+rm -rf "$TEMP_DIR"
+
+###############################################################################
+# Verify installation.
 ###############################################################################
 if command -v colima >/dev/null 2>&1; then
     log_info "Colima installed successfully."
@@ -128,18 +128,6 @@ else
 fi
 
 ###############################################################################
-# Function: Start Colima
-# Purpose:
-# Starts the Colima virtual machine if not already running.
+# Installation completed.
 ###############################################################################
-if ! colima status >/dev/null 2>&1; then
-    log_info "Starting Colima..."
-    colima start
-else
-    log_info "Colima is already running."
-fi
-
-###############################################################################
-# Installation completed
-###############################################################################
-log_info "Colima installation completed successfully."
+log_info "Installation completed successfully."
