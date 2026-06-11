@@ -6,42 +6,40 @@
 # GitHub - https://github.com/sanjaykshebbar/Automation
 #
 # What does this code do:
-# - Installs the latest Colima release.
-# - Supports Intel and Apple Silicon Macs.
-# - Downloads the correct binary.
-# - Installs it into /usr/local/bin.
-# - Verifies the installation.
+# - Detects whether Colima is installed system-wide.
+# - Checks for the Colima binary in /usr/local/bin.
+# - Verifies that the binary is executable and functional.
+# - Returns exit code 0 if Colima is installed and working.
+# - Returns exit code 1 if Colima is not installed or is corrupted.
 ###############################################################################
 
-set -e
+###############################################################################
+# Define the expected Colima binary location.
+###############################################################################
+COLIMA_BIN="/usr/local/bin/colima"
 
-ARCH=$(uname -m)
+###############################################################################
+# Verify that the Colima binary exists and is executable.
+###############################################################################
+if [ -x "$COLIMA_BIN" ]; then
 
-case "$ARCH" in
-    arm64)
-        DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/latest/download/colima-Darwin-arm64"
-        ;;
-    x86_64)
-        DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/latest/download/colima-Darwin-x86_64"
-        ;;
-    *)
-        echo "[ERROR] Unsupported architecture: $ARCH"
+    ############################################################################
+    # Verify that the Colima binary can execute successfully.
+    ############################################################################
+    if "$COLIMA_BIN" version >/dev/null 2>&1; then
+        echo "Colima is installed and functional."
+        exit 0
+    else
+        echo "Colima binary exists but is not functional."
         exit 1
-        ;;
-esac
+    fi
 
-TMP_FILE=$(mktemp)
+else
 
-echo "[INFO] Downloading Colima..."
-curl -fL "$DOWNLOAD_URL" -o "$TMP_FILE"
+    ############################################################################
+    # Colima binary was not found.
+    ############################################################################
+    echo "Colima is not installed."
+    exit 1
 
-chmod +x "$TMP_FILE"
-
-echo "[INFO] Installing Colima..."
-sudo mkdir -p /usr/local/bin
-sudo mv "$TMP_FILE" /usr/local/bin/colima
-
-echo "[INFO] Verifying installation..."
-/usr/local/bin/colima version
-
-echo "[INFO] Colima installation completed successfully."
+fi
