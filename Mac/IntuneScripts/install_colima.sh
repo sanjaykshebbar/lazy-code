@@ -2,26 +2,25 @@
 
 ###############################################################################
 # Author - Sanjay KS
-# Email - sanjayks@zeta.tech
 # GitHub - https://github.com/sanjaykshebbar/Automation
 #
 # What does this code do:
 # - Installs the latest version of Colima on macOS.
 # - Supports both Intel and Apple Silicon Macs.
-# - Automatically determines the latest release from GitHub.
-# - Downloads the correct binary archive.
-# - Extracts and installs the Colima binary.
+# - Retrieves the latest release information from GitHub.
+# - Downloads the appropriate archive for the detected architecture.
+# - Extracts and installs the Colima binary into /usr/local/bin.
 # - Verifies the installation.
 ###############################################################################
 
 ###############################################################################
-# Exit immediately if any command fails.
+# Exit immediately if a command fails.
 ###############################################################################
 set -e
 
 ###############################################################################
 # Function:
-# Print informational messages.
+# Display informational messages.
 ###############################################################################
 log_info() {
     echo "[INFO] $1"
@@ -29,7 +28,7 @@ log_info() {
 
 ###############################################################################
 # Function:
-# Print error messages.
+# Display error messages.
 ###############################################################################
 log_error() {
     echo "[ERROR] $1"
@@ -38,14 +37,14 @@ log_error() {
 ###############################################################################
 # Determine system architecture.
 ###############################################################################
-ARCH="$(uname -m)"
+ARCH=$(uname -m)
 
 case "$ARCH" in
     arm64)
-        COLIMA_ARCH="arm64"
+        ASSET_NAME="colima-Darwin-arm64.tar.gz"
         ;;
     x86_64)
-        COLIMA_ARCH="x86_64"
+        ASSET_NAME="colima-Darwin-x86_64.tar.gz"
         ;;
     *)
         log_error "Unsupported architecture: $ARCH"
@@ -56,29 +55,25 @@ esac
 log_info "Detected architecture: $ARCH"
 
 ###############################################################################
-# Retrieve the latest release tag from GitHub.
+# Retrieve the download URL for the latest release.
 ###############################################################################
-LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/abiosoft/colima/releases/latest \
-    | grep '"tag_name"' \
+log_info "Retrieving latest Colima release information..."
+
+DOWNLOAD_URL=$(curl -fsSL https://api.github.com/repos/abiosoft/colima/releases/latest \
+    | grep browser_download_url \
+    | grep "$ASSET_NAME" \
     | cut -d '"' -f4)
 
-if [ -z "$LATEST_VERSION" ]; then
-    log_error "Unable to determine the latest Colima version."
+if [ -z "$DOWNLOAD_URL" ]; then
+    log_error "Unable to determine the download URL."
     exit 1
 fi
-
-log_info "Latest version detected: $LATEST_VERSION"
-
-###############################################################################
-# Build download URL.
-###############################################################################
-DOWNLOAD_URL="https://github.com/abiosoft/colima/releases/download/${LATEST_VERSION}/colima-Darwin-${COLIMA_ARCH}.tar.gz"
 
 log_info "Download URL:"
 echo "$DOWNLOAD_URL"
 
 ###############################################################################
-# Create a temporary directory.
+# Create temporary directory.
 ###############################################################################
 TEMP_DIR=$(mktemp -d)
 
@@ -104,7 +99,7 @@ if [ ! -d "/usr/local/bin" ]; then
 fi
 
 ###############################################################################
-# Install the binary.
+# Install Colima binary.
 ###############################################################################
 log_info "Installing Colima..."
 
@@ -128,6 +123,6 @@ else
 fi
 
 ###############################################################################
-# Installation completed.
+# Finished.
 ###############################################################################
 log_info "Installation completed successfully."
