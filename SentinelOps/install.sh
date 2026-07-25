@@ -35,6 +35,14 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+# curl ships with every macOS release, but check explicitly rather than let a
+# stripped-down environment fail confusingly three lines from now.
+command -v curl >/dev/null 2>&1 || { echo "ERROR: curl is required but not found on PATH." >&2; exit 1; }
+
+if [ -f "/Library/Application Support/SentinelOps/agent.json" ]; then
+  echo "Existing installation detected -- this will update the binary and re-verify enrollment in place (same device identity, not a new one)."
+fi
+
 BIN_URL="${SO_BIN_URL:-https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/SentinelOps/bin/$PLATFORM/sentinelops-agent}"
 TMP_BIN="$(mktemp)"
 trap 'rm -f "$TMP_BIN"' EXIT
