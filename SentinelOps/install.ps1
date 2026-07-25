@@ -10,6 +10,8 @@ param(
   [Parameter(Mandatory = $true)][string]$Token
 )
 $ErrorActionPreference = "Stop"
+# Windows PowerShell 5.1 defaults to old TLS; GitHub requires TLS 1.2.
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 $Server   = $Server.TrimEnd('/')
 $TaskName = "SentinelOpsAgent"
 $AgentUrl = if ($env:SO_AGENT_URL) { $env:SO_AGENT_URL } else { "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/SentinelOps/agent.mjs" }
