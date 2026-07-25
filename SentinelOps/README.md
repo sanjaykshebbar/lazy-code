@@ -36,9 +36,9 @@ than declaring victory the moment the service is registered).
 Once enrolled, the agent reports posture (hardware, OS, encryption/AV/firewall,
 network, installed software) on a recurring check-in, and executes only actions
 from its own compiled-in catalog — diagnostics, application install/update
-(`.msi` / `.pkg` / `.dmg`), reboot, hostname change, and on-screen notifications.
-Software installs are **simulated** (downloaded and validated, not executed)
-unless the deploying server explicitly enables real installs.
+(`.msi` / `.pkg` / `.dmg`), reboot, hostname change, on-screen notifications, and
+updating itself. Software installs are **simulated** (downloaded and validated,
+not executed) unless the deploying server explicitly enables real installs.
 
 ## Files
 
@@ -55,5 +55,9 @@ GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o path/to/lazy-co
 GOOS=darwin  GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o path/to/lazy-code/SentinelOps/bin/darwin-arm64/sentinelops-agent   ./cmd/sentinelops-agent
 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o path/to/lazy-code/SentinelOps/bin/darwin-amd64/sentinelops-agent   ./cmd/sentinelops-agent
 ```
-Commit and push. Already-enrolled devices keep working on the old binary until
-reinstalled — there's no auto-update channel yet.
+Commit and push. Already-enrolled devices keep running the old binary until an
+admin triggers **Update agent** on them from the device detail page (or reinstalls
+manually) — pushing here doesn't reach anything automatically. Note the bootstrap
+gap: a device has to already be running a build that *has* the update action (this
+one, 0.3.0+) before it can use it — a device stuck on something older needs one
+manual reinstall to cross that line, same as before.
