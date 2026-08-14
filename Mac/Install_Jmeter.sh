@@ -1,24 +1,31 @@
 #!/bin/bash
 
-set -euo pipefail
+###############################################################################
+# Apache JMeter + Java 21
+# macOS User-Level Installation
+#
+# Requirements:
+#   - macOS
+#   - Standard user account
+#   - Internet access
+#
+# Does NOT require:
+#   - sudo
+#   - Homebrew
+#   - Administrator privileges
+#
+# Installation:
+#   $HOME/CLI/java
+#   $HOME/CLI/jmeter
+#   $HOME/.local/bin/jmeter
+#
+###############################################################################
+
+set -uo pipefail
 
 ###############################################################################
-# Apache JMeter - macOS Non-Sudo Installation
-#
-# Installs:
-#   - Eclipse Temurin JDK 21
-#   - Apache JMeter 5.6.3
-#
-# Installation location:
-#   $HOME/CLI/
-#
-# No sudo required.
-# No Homebrew required.
-###############################################################################
-
-# -----------------------------------------------------------------------------
 # Configuration
-# -----------------------------------------------------------------------------
+###############################################################################
 
 JAVA_VERSION="21"
 JMETER_VERSION="5.6.3"
@@ -27,55 +34,106 @@ INSTALL_ROOT="$HOME/CLI"
 JAVA_ROOT="$INSTALL_ROOT/java"
 JMETER_ROOT="$INSTALL_ROOT/jmeter"
 
+LOCAL_BIN="$HOME/.local/bin"
 TEMP_DIR="$HOME/.jmeter-install-temp"
 
 SHELL_RC="$HOME/.zshrc"
 
-# -----------------------------------------------------------------------------
+###############################################################################
 # Colors
-# -----------------------------------------------------------------------------
+###############################################################################
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    CYAN=''
+    NC=''
+fi
 
-# -----------------------------------------------------------------------------
-# Functions
-# -----------------------------------------------------------------------------
+###############################################################################
+# Logging
+###############################################################################
 
-log() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+info() {
+    printf "%b[INFO]%b %s\n" "$BLUE" "$NC" "$1"
 }
 
 success() {
-    echo -e "${GREEN}[OK]${NC} $1"
+    printf "%b[OK]%b %s\n" "$GREEN" "$NC" "$1"
 }
 
 warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+    printf "%b[WARNING]%b %s\n" "$YELLOW" "$NC" "$1"
 }
 
 error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf "%b[ERROR]%b %s\n" "$RED" "$NC" "$1"
+}
+
+###############################################################################
+# Exit Handler
+###############################################################################
+
+cleanup() {
+    if [[ -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+}
+
+trap cleanup EXIT
+
+###############################################################################
+# Error Handler
+###############################################################################
+
+die() {
+    error "$1"
     exit 1
 }
 
-# -----------------------------------------------------------------------------
-# Check macOS
-# -----------------------------------------------------------------------------
+###############################################################################
+# Banner
+###############################################################################
+
+printf "\n"
+printf "%b============================================================%b\n" "$CYAN" "$NC"
+printf "%b Apache JMeter macOS Installation%b\n" "$CYAN" "$NC"
+printf "%b============================================================%b\n" "$CYAN" "$NC"
+printf "\n"
+
+###############################################################################
+# Check OS
+###############################################################################
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
-    error "This script is designed for macOS only."
+    die "This script supports macOS only."
 fi
 
-log "Detected macOS:"
+info "Detected macOS:"
 sw_vers
 
-# -----------------------------------------------------------------------------
-# Check architecture
-# -----------------------------------------------------------------------------
+printf "\n"
+
+###############################################################################
+# Check macOS version
+###############################################################################
+
+MACOS_VERSION="$(sw_vers -productVersion)"
+
+info "macOS version: $MACOS_VERSION"
+
+###############################################################################
+# Detect Architecture
+###############################################################################
 
 ARCH="$(uname -m)"
 
@@ -83,208 +141,424 @@ case "$ARCH" in
 
     arm64)
         ADOPTIUM_ARCH="aarch64"
-        log "Architecture detected: Apple Silicon (arm64)"
+        info "Architecture detected: Apple Silicon (arm64)"
         ;;
 
     x86_64)
         ADOPTIUM_ARCH="x64"
-        log "Architecture detected: Intel (x86_64)"
+        info "Architecture detected: Intel (x86_64)"
         ;;
 
     *)
-        error "Unsupported architecture: $ARCH"
+        die "Unsupported architecture: $ARCH"
         ;;
 
 esac
 
-# -----------------------------------------------------------------------------
-# Check required commands
-# -----------------------------------------------------------------------------
+###############################################################################
+# Check User
+###############################################################################
 
-for command in curl tar unzip awk grep sed; do
+if [[ "$EUID" -eq 0 ]]; then
+    die "Do not run this script as root or with sudo."
+fi
+
+success "Running as standard user: $USER"
+
+###############################################################################
+# Check Required Commands
+###############################################################################
+
+REQUIRED_COMMANDS=(
+    curl
+    tar
+    mkdir
+    rm
+    mv
+    ln
+    chmod
+    sed
+    grep
+    awk
+)
+
+info "Checking required system commands..."
+
+for command in "${REQUIRED_COMMANDS[@]}"; do
 
     if ! command -v "$command" >/dev/null 2>&1; then
-        error "Required command not found: $command"
+        die "Required command not found: $command"
     fi
 
 done
 
 success "Required system commands are available."
 
-# -----------------------------------------------------------------------------
-# Create directories
-# -----------------------------------------------------------------------------
+###############################################################################
+# Create Directories
+###############################################################################
+
+info "Creating user-level installation directories..."
 
 mkdir -p "$INSTALL_ROOT"
-mkdir -p "$JAVA_ROOT"
-mkdir -p "$JMETER_ROOT"
+mkdir -p "$LOCAL_BIN"
 mkdir -p "$TEMP_DIR"
 
 success "Installation directories created."
 
-# -----------------------------------------------------------------------------
-# Check existing Java
-# -----------------------------------------------------------------------------
+###############################################################################
+# JAVA DETECTION
+###############################################################################
 
 JAVA_HOME_VALUE=""
 
-if command -v java >/dev/null 2>&1; then
+printf "\n"
+info "Checking for Java $JAVA_VERSION..."
 
-    EXISTING_JAVA="$(java -version 2>&1 | head -n 1)"
+###############################################################################
+# Check current JAVA_HOME
+###############################################################################
 
-    log "Existing Java detected:"
-    echo "$EXISTING_JAVA"
+if [[ -n "${JAVA_HOME:-}" ]]; then
 
-    if /usr/libexec/java_home -v "$JAVA_VERSION" >/dev/null 2>&1; then
+    if [[ -x "$JAVA_HOME/bin/java" ]]; then
 
-        JAVA_HOME_VALUE="$(/usr/libexec/java_home -v "$JAVA_VERSION")"
+        CURRENT_JAVA_VERSION="$(
+            "$JAVA_HOME/bin/java" -version 2>&1 |
+            awk -F '"' '/version/ {print $2; exit}'
+        )"
 
-        success "Java $JAVA_VERSION already installed:"
-        echo "$JAVA_HOME_VALUE"
+        if [[ "$CURRENT_JAVA_VERSION" == 21* ]]; then
 
-    else
+            JAVA_HOME_VALUE="$JAVA_HOME"
 
-        warning "Java $JAVA_VERSION was not found."
-        log "A user-local JDK will be installed."
+            success "Java 21 already configured:"
+            echo "       $JAVA_HOME_VALUE"
+
+        fi
 
     fi
 
-else
-
-    warning "Java is not currently installed."
-    log "A user-local JDK will be installed."
-
 fi
 
-# -----------------------------------------------------------------------------
-# Install Temurin JDK if required
-# -----------------------------------------------------------------------------
+###############################################################################
+# Check macOS Java installation
+###############################################################################
 
 if [[ -z "$JAVA_HOME_VALUE" ]]; then
 
-    log "Installing Eclipse Temurin JDK $JAVA_VERSION..."
+    JAVA_HOME_DETECTED=""
+
+    if JAVA_HOME_DETECTED="$(
+        /usr/libexec/java_home -v "$JAVA_VERSION" 2>/dev/null
+    )"; then
+
+        if [[ -n "$JAVA_HOME_DETECTED" ]] &&
+           [[ -x "$JAVA_HOME_DETECTED/bin/java" ]]; then
+
+            JAVA_HOME_VALUE="$JAVA_HOME_DETECTED"
+
+            success "Java $JAVA_VERSION found:"
+            echo "       $JAVA_HOME_VALUE"
+
+        fi
+
+    fi
+
+fi
+
+###############################################################################
+# Check java command
+###############################################################################
+
+if [[ -z "$JAVA_HOME_VALUE" ]]; then
+
+    if command -v java >/dev/null 2>&1; then
+
+        SYSTEM_JAVA="$(command -v java)"
+
+        JAVA_VERSION_DETECTED="$(
+            "$SYSTEM_JAVA" -version 2>&1 |
+            awk -F '"' '/version/ {print $2; exit}'
+        )"
+
+        info "Existing Java detected: ${JAVA_VERSION_DETECTED:-unknown}"
+
+        if [[ "$JAVA_VERSION_DETECTED" == 21* ]]; then
+
+            JAVA_HOME_DETECTED="$(
+                /usr/libexec/java_home 2>/dev/null || true
+            )"
+
+            if [[ -n "$JAVA_HOME_DETECTED" ]] &&
+               [[ -x "$JAVA_HOME_DETECTED/bin/java" ]]; then
+
+                JAVA_HOME_VALUE="$JAVA_HOME_DETECTED"
+
+                success "Existing Java 21 will be used."
+
+            fi
+
+        fi
+
+    fi
+
+fi
+
+###############################################################################
+# Install Java if required
+###############################################################################
+
+if [[ -z "$JAVA_HOME_VALUE" ]]; then
+
+    printf "\n"
+    info "Java $JAVA_VERSION is not available."
+    info "Installing Eclipse Temurin JDK $JAVA_VERSION locally..."
+    printf "\n"
 
     JAVA_ARCHIVE="$TEMP_DIR/temurin-jdk.tar.gz"
 
     JAVA_API_URL="https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/macos/${ADOPTIUM_ARCH}/jdk/hotspot/normal/eclipse"
 
-    log "Downloading Java from Adoptium..."
+    info "Downloading Temurin JDK..."
+    info "Architecture: $ADOPTIUM_ARCH"
 
-    curl -fL \
+    if ! curl -fL \
         --retry 3 \
         --retry-delay 2 \
+        --connect-timeout 20 \
+        --max-time 600 \
         "$JAVA_API_URL" \
-        -o "$JAVA_ARCHIVE"
+        -o "$JAVA_ARCHIVE"; then
 
-    success "Java archive downloaded."
+        die "Failed to download Temurin JDK."
+    fi
 
-    # Remove previous user-local Java installation if present
-    rm -rf "$JAVA_ROOT"
+    success "JDK download completed."
+
+    ###########################################################################
+    # Validate archive
+    ###########################################################################
+
+    if [[ ! -s "$JAVA_ARCHIVE" ]]; then
+        die "Downloaded Java archive is empty."
+    fi
+
+    ###########################################################################
+    # Remove old local Java installation
+    ###########################################################################
+
+    if [[ -d "$JAVA_ROOT" ]]; then
+        warning "Existing local Java installation found."
+        info "Replacing: $JAVA_ROOT"
+
+        rm -rf "$JAVA_ROOT"
+    fi
 
     mkdir -p "$JAVA_ROOT"
 
-    log "Extracting JDK..."
+    ###########################################################################
+    # Extract Java
+    ###########################################################################
 
-    tar -xzf "$JAVA_ARCHIVE" \
+    info "Extracting JDK..."
+
+    if ! tar -xzf "$JAVA_ARCHIVE" \
         -C "$JAVA_ROOT" \
-        --strip-components=1
+        --strip-components=1; then
 
+        die "Failed to extract JDK archive."
+    fi
+
+    ###########################################################################
     # Validate Java
+    ###########################################################################
+
     if [[ ! -x "$JAVA_ROOT/bin/java" ]]; then
-        error "Java installation failed. java executable was not found."
+        die "Java installation failed. java executable not found."
+    fi
+
+    if [[ ! -x "$JAVA_ROOT/bin/javac" ]]; then
+        warning "javac executable was not found."
     fi
 
     JAVA_HOME_VALUE="$JAVA_ROOT"
 
-    success "Temurin JDK installed under:"
-    echo "$JAVA_HOME_VALUE"
+    success "Temurin JDK installed:"
+    echo "       $JAVA_HOME_VALUE"
 
 fi
 
-# -----------------------------------------------------------------------------
-# Configure Java for current session
-# -----------------------------------------------------------------------------
+###############################################################################
+# Configure Java Current Session
+###############################################################################
 
 export JAVA_HOME="$JAVA_HOME_VALUE"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-log "Java version:"
-java -version
+###############################################################################
+# Validate Java
+###############################################################################
 
-# -----------------------------------------------------------------------------
-# Install Apache JMeter
-# -----------------------------------------------------------------------------
+printf "\n"
+info "Validating Java..."
 
-log "Installing Apache JMeter $JMETER_VERSION..."
+JAVA_VERSION_OUTPUT="$(
+    "$JAVA_HOME/bin/java" -version 2>&1
+)"
+
+echo "$JAVA_VERSION_OUTPUT"
+
+JAVA_MAJOR_VERSION="$(
+    "$JAVA_HOME/bin/java" -version 2>&1 |
+    awk -F '"' '/version/ {print $2; exit}' |
+    awk -F. '{print $1}'
+)"
+
+if [[ "$JAVA_MAJOR_VERSION" != "21" ]]; then
+    die "Expected Java 21 but detected: ${JAVA_MAJOR_VERSION:-unknown}"
+fi
+
+success "Java 21 is working."
+
+###############################################################################
+# JMETER INSTALLATION
+###############################################################################
+
+printf "\n"
+info "Installing Apache JMeter $JMETER_VERSION..."
 
 JMETER_ARCHIVE="$TEMP_DIR/apache-jmeter-${JMETER_VERSION}.tgz"
 
 JMETER_URL="https://dlcdn.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz"
 
-log "Downloading JMeter..."
+###############################################################################
+# Download JMeter
+###############################################################################
 
-curl -fL \
+info "Downloading Apache JMeter..."
+
+if ! curl -fL \
     --retry 3 \
     --retry-delay 2 \
+    --connect-timeout 20 \
+    --max-time 600 \
     "$JMETER_URL" \
-    -o "$JMETER_ARCHIVE"
+    -o "$JMETER_ARCHIVE"; then
 
-success "JMeter archive downloaded."
-
-# -----------------------------------------------------------------------------
-# Extract JMeter
-# -----------------------------------------------------------------------------
-
-rm -rf "$JMETER_ROOT"
-
-mkdir -p "$JMETER_ROOT"
-
-log "Extracting JMeter..."
-
-tar -xzf "$JMETER_ARCHIVE" \
-    -C "$TEMP_DIR"
-
-EXTRACTED_JMETER="$TEMP_DIR/apache-jmeter-${JMETER_VERSION}"
-
-if [[ ! -d "$EXTRACTED_JMETER" ]]; then
-    error "JMeter extraction failed."
+    die "Failed to download Apache JMeter."
 fi
 
-mv "$EXTRACTED_JMETER" "$JMETER_ROOT"
+success "JMeter download completed."
 
-success "JMeter installed under:"
-echo "$JMETER_ROOT"
+###############################################################################
+# Validate JMeter archive
+###############################################################################
 
-# -----------------------------------------------------------------------------
-# Make JMeter executable
-# -----------------------------------------------------------------------------
+if [[ ! -s "$JMETER_ARCHIVE" ]]; then
+    die "JMeter archive is empty."
+fi
+
+###############################################################################
+# Extract JMeter
+###############################################################################
+
+EXTRACT_DIR="$TEMP_DIR/apache-jmeter-${JMETER_VERSION}"
+
+rm -rf "$EXTRACT_DIR"
+
+info "Extracting JMeter..."
+
+if ! tar -xzf "$JMETER_ARCHIVE" \
+    -C "$TEMP_DIR"; then
+
+    die "Failed to extract JMeter archive."
+fi
+
+if [[ ! -d "$EXTRACT_DIR" ]]; then
+    die "JMeter extraction directory was not found."
+fi
+
+###############################################################################
+# Replace existing installation
+###############################################################################
+
+if [[ -d "$JMETER_ROOT" ]]; then
+
+    warning "Existing JMeter installation found:"
+    echo "       $JMETER_ROOT"
+
+    info "Replacing existing installation..."
+
+    rm -rf "$JMETER_ROOT"
+
+fi
+
+###############################################################################
+# Move JMeter
+###############################################################################
+
+mv "$EXTRACT_DIR" "$JMETER_ROOT"
+
+success "JMeter installed:"
+echo "       $JMETER_ROOT"
+
+###############################################################################
+# Permissions
+###############################################################################
 
 chmod +x "$JMETER_ROOT/bin/jmeter"
 chmod +x "$JMETER_ROOT/bin/jmeter.sh"
 
-# -----------------------------------------------------------------------------
-# Create convenience symlinks
-# -----------------------------------------------------------------------------
+###############################################################################
+# Create JMeter Symlink
+###############################################################################
 
-LOCAL_BIN="$HOME/.local/bin"
+info "Creating JMeter command..."
 
-mkdir -p "$LOCAL_BIN"
+ln -sf \
+    "$JMETER_ROOT/bin/jmeter" \
+    "$LOCAL_BIN/jmeter"
 
-ln -sf "$JMETER_ROOT/bin/jmeter" "$LOCAL_BIN/jmeter"
+success "JMeter command created:"
+echo "       $LOCAL_BIN/jmeter"
 
-success "JMeter command linked to:"
-echo "$LOCAL_BIN/jmeter"
+###############################################################################
+# Configure Shell
+###############################################################################
 
-# -----------------------------------------------------------------------------
-# Update ~/.zshrc
-# -----------------------------------------------------------------------------
-
-log "Configuring ~/.zshrc..."
+printf "\n"
+info "Configuring shell environment..."
 
 touch "$SHELL_RC"
 
-# Remove previous entries created by this script
-sed -i '' '/# >>> JMeter User Installation >>>/,/# <<< JMeter User Installation <<</d' "$SHELL_RC"
+###############################################################################
+# Remove previous configuration
+###############################################################################
+
+TEMP_RC="$TEMP_DIR/zshrc.new"
+
+awk '
+/# >>> JMeter User Installation >>>/ {
+    skip=1
+    next
+}
+
+/# <<< JMeter User Installation <<</ {
+    skip=0
+    next
+}
+
+!skip {
+    print
+}
+' "$SHELL_RC" > "$TEMP_RC"
+
+mv "$TEMP_RC" "$SHELL_RC"
+
+###############################################################################
+# Add configuration
+###############################################################################
 
 cat >> "$SHELL_RC" <<EOF
 
@@ -294,148 +568,137 @@ export JAVA_HOME="$JAVA_HOME_VALUE"
 export JMETER_HOME="$JMETER_ROOT"
 export PATH="\$JAVA_HOME/bin:\$JMETER_HOME/bin:\$HOME/.local/bin:\$PATH"
 
-# <<< JMeter User Installation <<<
+# <<< JMeter User Installation <<
 
 EOF
 
-success "~/.zshrc updated."
+success "Shell configuration updated."
 
-# -----------------------------------------------------------------------------
-# Apply configuration to current shell
-# -----------------------------------------------------------------------------
+###############################################################################
+# Configure Current Shell
+###############################################################################
 
+export JAVA_HOME="$JAVA_HOME_VALUE"
 export JMETER_HOME="$JMETER_ROOT"
 export PATH="$JAVA_HOME/bin:$JMETER_HOME/bin:$LOCAL_BIN:$PATH"
 
-# -----------------------------------------------------------------------------
-# Verify Java
-# -----------------------------------------------------------------------------
+###############################################################################
+# Verify PATH
+###############################################################################
 
-echo
-echo "============================================================"
-echo " Java Verification"
-echo "============================================================"
+printf "\n"
+info "Checking PATH..."
 
-echo
-echo "JAVA_HOME:"
-echo "$JAVA_HOME"
-
-echo
-echo "Java:"
-java -version
-
-echo
-echo "Javac:"
-javac -version
-
-# -----------------------------------------------------------------------------
-# Verify JMeter
-# -----------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo " JMeter Verification"
-echo "============================================================"
-
-echo
-echo "JMETER_HOME:"
-echo "$JMETER_HOME"
-
-echo
-echo "JMeter executable:"
-command -v jmeter
-
-echo
-echo "JMeter version:"
-
-jmeter --version
-
-# -----------------------------------------------------------------------------
-# Test JMeter CLI
-# -----------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo " JMeter CLI Test"
-echo "============================================================"
-
-if "$JMETER_ROOT/bin/jmeter" -n -v >/dev/null 2>&1; then
-    success "JMeter CLI is working."
+if [[ ":$PATH:" == *":$LOCAL_BIN:"* ]]; then
+    success "$LOCAL_BIN is present in PATH."
 else
-    warning "JMeter CLI returned a non-zero status during validation."
+    warning "$LOCAL_BIN is not currently in PATH."
+    warning "It will be available after starting a new terminal."
 fi
 
-# -----------------------------------------------------------------------------
-# Cleanup
-# -----------------------------------------------------------------------------
+###############################################################################
+# Verify JMeter Binary
+###############################################################################
 
-log "Cleaning temporary files..."
+printf "\n"
+info "Validating JMeter..."
 
-rm -rf "$TEMP_DIR"
+if [[ ! -x "$JMETER_ROOT/bin/jmeter" ]]; then
+    die "JMeter executable was not found."
+fi
 
-success "Temporary files cleaned."
+###############################################################################
+# JMeter Version
+###############################################################################
 
-# -----------------------------------------------------------------------------
-# Final output
-# -----------------------------------------------------------------------------
+JMETER_VERSION_OUTPUT="$(
+    "$JMETER_ROOT/bin/jmeter" --version 2>&1
+)"
 
-echo
-echo "============================================================"
-echo " Installation Completed"
-echo "============================================================"
+echo "$JMETER_VERSION_OUTPUT"
 
-echo
-echo "Java:"
-echo "  $JAVA_HOME"
+if "$JMETER_ROOT/bin/jmeter" --version >/dev/null 2>&1; then
+    success "JMeter CLI is working."
+else
+    die "JMeter validation failed."
+fi
 
-echo
-echo "JMeter:"
-echo "  $JMETER_HOME"
+###############################################################################
+# Final Verification
+###############################################################################
 
-echo
-echo "JMeter command:"
-echo "  $(command -v jmeter)"
+printf "\n"
+printf "%b============================================================%b\n" "$GREEN" "$NC"
+printf "%b Installation Completed Successfully%b\n" "$GREEN" "$NC"
+printf "%b============================================================%b\n" "$GREEN" "$NC"
 
-echo
-echo "Installed versions:"
+printf "\n"
 
-echo
-java -version
+echo "Operating System : macOS"
+echo "Architecture     : $ARCH"
+echo "Java             : $JAVA_HOME"
+echo "JMeter           : $JMETER_HOME"
+echo "JMeter Command   : $LOCAL_BIN/jmeter"
 
-echo
-jmeter --version
+printf "\n"
 
-echo
-echo "============================================================"
-echo " IMPORTANT"
-echo "============================================================"
+echo "Java Version:"
+"$JAVA_HOME/bin/java" -version 2>&1
 
+printf "\n"
+
+echo "JMeter Version:"
+"$JMETER_ROOT/bin/jmeter" --version
+
+printf "\n"
+
+printf "%b============================================================%b\n" "$CYAN" "$NC"
+printf "%b Next Steps%b\n" "$CYAN" "$NC"
+printf "%b============================================================%b\n" "$CYAN" "$NC"
+
+printf "\n"
+
+echo "1. Reload your shell:"
 echo
-echo "Open a new Terminal session or run:"
+echo "   source ~/.zshrc"
+
+printf "\n"
+
+echo "2. Verify Java:"
 echo
-echo "    source ~/.zshrc"
+echo "   java -version"
+
+printf "\n"
+
+echo "3. Verify JMeter:"
 echo
-echo "Then verify:"
+echo "   jmeter --version"
+
+printf "\n"
+
+echo "4. Launch JMeter GUI:"
 echo
-echo "    java -version"
-echo "    javac -version"
-echo "    jmeter --version"
+echo "   jmeter"
+
+printf "\n"
+
+echo "5. Run a test in CLI mode:"
 echo
-echo "Launch JMeter GUI:"
+echo "   jmeter -n -t test.jmx -l results.jtl"
+
+printf "\n"
+
+echo "6. Generate HTML report:"
 echo
-echo "    jmeter"
-echo
-echo "Run JMeter in CLI mode:"
-echo
-echo "    jmeter -n -t test.jmx -l results.jtl"
-echo
-echo "Generate HTML report:"
-echo
-echo "    jmeter -n -t test.jmx -l results.jtl -e -o report"
-echo
+echo "   jmeter -n -t test.jmx -l results.jtl -e -o report"
+
+printf "\n"
+
 echo "Installation location:"
 echo
-echo "    $INSTALL_ROOT"
-echo
-echo "No sudo was required."
+echo "   $INSTALL_ROOT"
+
+printf "\n"
+
+success "No sudo was used."
 echo
