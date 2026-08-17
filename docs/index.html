@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lazy Code - script search</title>
+<style>
+  :root {
+    --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --line:#d1d9e0;
+    --card:#f6f8fa; --accent:#0969da; --code:#f6f8fa; --hit:#fff8c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#3d444d;
+      --card:#151b23; --accent:#4493f8; --code:#151b23; --hit:#3f2e00;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:2rem 1rem 4rem; background:var(--bg); color:var(--fg);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; }
+  .sub { color:var(--muted); margin:0 0 1.5rem; }
+  .sub a { color:var(--accent); }
+  .searchbar { position:sticky; top:0; background:var(--bg); padding:.75rem 0 1rem; z-index:5; }
+  input[type=search] {
+    width:100%; padding:.7rem .9rem; font-size:1rem; color:var(--fg);
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
+  }
+  input[type=search]:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .count { color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+  h2 { font-size:1.05rem; margin:1.75rem 0 .6rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+  .item { padding:.7rem 0; border-bottom:1px solid var(--line); }
+  .top { display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+  .name { font-weight:600; }
+  .name a { color:var(--accent); text-decoration:none; }
+  .name a:hover { text-decoration:underline; }
+  .path { color:var(--muted); font-size:.8rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .desc { color:var(--fg); margin:.15rem 0 .45rem; }
+  .cmdrow { display:flex; gap:.5rem; align-items:stretch; }
+  code.cmd {
+    flex:1; display:block; background:var(--code); border:1px solid var(--line);
+    border-radius:6px; padding:.45rem .6rem; font-size:.8rem; overflow-x:auto;
+    white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  button.copy {
+    border:1px solid var(--line); background:var(--card); color:var(--fg);
+    border-radius:6px; padding:0 .7rem; cursor:pointer; font-size:.8rem; white-space:nowrap;
+  }
+  button.copy:hover { border-color:var(--accent); color:var(--accent); }
+  mark { background:var(--hit); color:inherit; padding:0 .1em; border-radius:2px; }
+  .empty { color:var(--muted); padding:2rem 0; }
+  kbd {
+    border:1px solid var(--line); border-bottom-width:2px; border-radius:4px;
+    padding:0 .35em; font-size:.8em; background:var(--card);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lazy Code</h1>
+  <p class="sub">39 setup scripts &middot;
+    <a href="https://github.com/sanjaykshebbar/lazy-code">repository</a></p>
+
+  <div class="searchbar">
+    <input type="search" id="q" placeholder="Search by name, description or platform..."
+           autocomplete="off" autofocus aria-label="Search scripts">
+    <div class="count" id="count">Press <kbd>/</kbd> to focus &middot; <kbd>Esc</kbd> to clear</div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+const DATA = [
+ {
+  "name": "install-clawbot.sh",
+  "path": "Linux/CentOS/install-clawbot.sh",
+  "description": "OpenClaw bot together with Node.js 18",
+  "platform": "Linux",
+  "group": "\ud83d\udc27 Standard - Linux",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/CentOS/install-clawbot.sh | bash"
+ },
+ {
+  "name": "install-kubernetes-master.sh",
+  "path": "Linux/install-kubernetes-master.sh",
+  "description": "Kubernetes control-plane node (Docker, kubeadm, kubelet)",
+  "platform": "Linux",
+  "group": "\ud83d\udc27 Standard - Linux",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/install-kubernetes-master.sh | bash"
+ },
+ {
+  "name": "install-maven.sh",
+  "path": "Linux/install-maven.sh",
+  "description": "Apache Maven, plus a JDK if one is missing - no sudo required",
+  "platform": "Linux",
+  "group": "\ud83d\udc27 Standard - Linux",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/install-maven.sh | bash"
+ },
+ {
+  "name": "reset-kubernetes.sh",
+  "path": "Linux/reset-kubernetes.sh",
+  "description": "Tear down a kubeadm cluster and clean up residual state",
+  "platform": "Linux",
+  "group": "\ud83d\udc27 Standard - Linux",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/reset-kubernetes.sh | bash"
+ },
+ {
+  "name": "setup-ubuntu-host.sh",
+  "path": "Linux/setup-ubuntu-host.sh",
+  "description": "Set the hostname and install an OpenSSH server on Ubuntu",
+  "platform": "Linux",
+  "group": "\ud83d\udc27 Standard - Linux",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/setup-ubuntu-host.sh | bash"
+ },
+ {
+  "name": "clean-junk.sh",
+  "path": "macOS/clean-junk.sh",
+  "description": "Clear caches, logs and other junk to reclaim disk space",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/clean-junk.sh | bash"
+ },
+ {
+  "name": "install-allure.sh",
+  "path": "macOS/install-allure.sh",
+  "description": "Allure test-reporting CLI (latest GitHub release)",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-allure.sh | bash"
+ },
+ {
+  "name": "install-autoconf.sh",
+  "path": "macOS/install-autoconf.sh",
+  "description": "GNU Autoconf, built from source",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-autoconf.sh | bash"
+ },
+ {
+  "name": "install-claude-code-cli-basic.sh",
+  "path": "macOS/install-claude-code-cli-basic.sh",
+  "description": "Claude Code CLI - simple installer, always the latest build",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-claude-code-cli-basic.sh | bash"
+ },
+ {
+  "name": "install-claude-code-cli.sh",
+  "path": "macOS/install-claude-code-cli.sh",
+  "description": "Claude Code CLI - accepts stable, latest or a pinned version",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-claude-code-cli.sh | bash"
+ },
+ {
+  "name": "install-cocoapods.sh",
+  "path": "macOS/install-cocoapods.sh",
+  "description": "CocoaPods dependency manager, with its own private Ruby",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-cocoapods.sh | bash"
+ },
+ {
+  "name": "install-dbt.sh",
+  "path": "macOS/install-dbt.sh",
+  "description": "dbt (data build tool) CLI",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-dbt.sh | bash"
+ },
+ {
+  "name": "install-fvm.sh",
+  "path": "macOS/install-fvm.sh",
+  "description": "Flutter Version Management (FVM) plus a bundled Dart SDK",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-fvm.sh | bash"
+ },
+ {
+  "name": "install-gnupg.sh",
+  "path": "macOS/install-gnupg.sh",
+  "description": "GnuPG, built from source",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-gnupg.sh | bash"
+ },
+ {
+  "name": "install-go.sh",
+  "path": "macOS/install-go.sh",
+  "description": "Go toolchain - resolves the current release automatically",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-go.sh | bash"
+ },
+ {
+  "name": "install-helm.sh",
+  "path": "macOS/install-helm.sh",
+  "description": "Helm, the Kubernetes package manager",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-helm.sh | sh"
+ },
+ {
+  "name": "install-hugo.sh",
+  "path": "macOS/install-hugo.sh",
+  "description": "Hugo static site generator (latest GitHub release)",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-hugo.sh | bash"
+ },
+ {
+  "name": "install-intellij-idea-ce.sh",
+  "path": "macOS/install-intellij-idea-ce.sh",
+  "description": "IntelliJ IDEA Community Edition, with a choice of versions",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-intellij-idea-ce.sh | bash"
+ },
+ {
+  "name": "install-jmeter.sh",
+  "path": "macOS/install-jmeter.sh",
+  "description": "Apache JMeter on macOS - no sudo, no Homebrew, with a Java check",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-jmeter.sh | bash"
+ },
+ {
+  "name": "install-k9s.sh",
+  "path": "macOS/install-k9s.sh",
+  "description": "k9s, the Kubernetes terminal UI",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-k9s.sh | zsh"
+ },
+ {
+  "name": "install-maven-mvnd.sh",
+  "path": "macOS/install-maven-mvnd.sh",
+  "description": "Maven Daemon (mvnd), the faster Maven front-end",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-maven-mvnd.sh | sh"
+ },
+ {
+  "name": "install-minikube-amd64.sh",
+  "path": "macOS/install-minikube-amd64.sh",
+  "description": "Minikube for Intel Macs",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-minikube-amd64.sh | bash"
+ },
+ {
+  "name": "install-minikube-arm64.sh",
+  "path": "macOS/install-minikube-arm64.sh",
+  "description": "Minikube for Apple Silicon Macs",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-minikube-arm64.sh | bash"
+ },
+ {
+  "name": "install-nvm.sh",
+  "path": "macOS/install-nvm.sh",
+  "description": "nvm, the Node Version Manager",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-nvm.sh | bash"
+ },
+ {
+  "name": "install-postgresql.sh",
+  "path": "macOS/install-postgresql.sh",
+  "description": "PostgreSQL binaries",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-postgresql.sh | bash"
+ },
+ {
+  "name": "install-redis.sh",
+  "path": "macOS/install-redis.sh",
+  "description": "Redis, built from source",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-redis.sh | bash"
+ },
+ {
+  "name": "install-teleport-v14-arm64.sh",
+  "path": "macOS/install-teleport-v14-arm64.sh",
+  "description": "Teleport v14 client (tsh) for Apple Silicon",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-teleport-v14-arm64.sh | bash"
+ },
+ {
+  "name": "install-teleport-v14.sh",
+  "path": "macOS/install-teleport-v14.sh",
+  "description": "Teleport v14 client (tsh), architecture auto-detected",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-teleport-v14.sh | bash"
+ },
+ {
+  "name": "install-terraform.sh",
+  "path": "macOS/install-terraform.sh",
+  "description": "Terraform - resolves the current release automatically",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-terraform.sh | bash"
+ },
+ {
+  "name": "install-cocoapods-verbose.sh",
+  "path": "macOS/scripts_with_logs/install-cocoapods-verbose.sh",
+  "description": "CocoaPods install with full step-by-step logging",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/scripts_with_logs/install-cocoapods-verbose.sh | bash"
+ },
+ {
+  "name": "collect-network-usage.sh",
+  "path": "macOS/troubleshooting/collect-network-usage.sh",
+  "description": "Sample per-process network usage over time",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/collect-network-usage.sh | bash"
+ },
+ {
+  "name": "generate-network-report.sh",
+  "path": "macOS/troubleshooting/generate-network-report.sh",
+  "description": "Collect a macOS network diagnostic report",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/generate-network-report.sh | bash"
+ },
+ {
+  "name": "generate-report.py",
+  "path": "macOS/troubleshooting/generate-report.py",
+  "description": "Render collected diagnostics into a readable report",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/generate-report.py -o report.py && python3 report.py"
+ },
+ {
+  "name": "install.sh",
+  "path": "DockerFiles/Guacomole/install.sh",
+  "description": "Apache Guacamole remote-desktop gateway via Docker Compose",
+  "platform": "Docker",
+  "group": "\ud83d\udc33 Standard - Docker",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/DockerFiles/Guacomole/install.sh | bash"
+ },
+ {
+  "name": "install-cocoapods.sh",
+  "path": "Intune/macOS/install-cocoapods.sh",
+  "description": "CocoaPods with a self-contained Ruby, packaged for Intune",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Intune - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Intune/macOS/install-cocoapods.sh | bash"
+ },
+ {
+  "name": "install-colima.sh",
+  "path": "Intune/macOS/install-colima.sh",
+  "description": "Colima container runtime, packaged for Intune",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Intune - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Intune/macOS/install-colima.sh | bash"
+ },
+ {
+  "name": "install-fvm.sh",
+  "path": "Intune/macOS/install-fvm.sh",
+  "description": "FVM and Flutter tooling, packaged for Intune",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Intune - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Intune/macOS/install-fvm.sh | zsh"
+ },
+ {
+  "name": "install-postman.sh",
+  "path": "Intune/macOS/install-postman.sh",
+  "description": "Postman desktop app, packaged for Intune",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Intune - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Intune/macOS/install-postman.sh | bash"
+ },
+ {
+  "name": "uninstall-rize-io.sh",
+  "path": "Intune/macOS/uninstall-rize-io.sh",
+  "description": "Remove the Rize.io app and all of its leftover data",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Intune - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Intune/macOS/uninstall-rize-io.sh | bash"
+ }
+];
+const q = document.getElementById('q');
+const results = document.getElementById('results');
+const count = document.getElementById('count');
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
+function mark(text, term) {
+  const safe = esc(text);
+  if (!term) return safe;
+  // Escape regex metacharacters so a query like "c++" cannot throw.
+  const re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+  return safe.replace(re, '<mark>$1</mark>');
+}
+
+function render() {
+  const term = q.value.trim();
+  const lower = term.toLowerCase();
+
+  const hits = DATA.filter(d =>
+    !lower ||
+    d.name.toLowerCase().includes(lower) ||
+    d.description.toLowerCase().includes(lower) ||
+    d.platform.toLowerCase().includes(lower) ||
+    d.path.toLowerCase().includes(lower)
+  );
+
+  count.textContent = term
+    ? hits.length + ' of ' + DATA.length + ' scripts match "' + term + '"'
+    : DATA.length + ' scripts';
+
+  if (!hits.length) {
+    results.innerHTML = '<p class="empty">No scripts match that search.</p>';
+    return;
+  }
+
+  const groups = {};
+  hits.forEach(d => (groups[d.group] = groups[d.group] || []).push(d));
+
+  results.innerHTML = Object.keys(groups).map(g => (
+    '<h2>' + esc(g) + ' <span class="path">' + groups[g].length + '</span></h2>' +
+    groups[g].map(d =>
+      '<div class="item">' +
+        '<div class="top">' +
+          '<span class="name"><a href="https://github.com/sanjaykshebbar/lazy-code/blob/main/' +
+            encodeURI(d.path) + '">' + mark(d.name, term) + '</a></span>' +
+          '<span class="path">' + mark(d.path, term) + '</span>' +
+        '</div>' +
+        '<div class="desc">' + mark(d.description, term) + '</div>' +
+        '<div class="cmdrow">' +
+          '<code class="cmd">' + esc(d.command) + '</code>' +
+          '<button class="copy" data-cmd="' + esc(d.command) + '">Copy</button>' +
+        '</div>' +
+      '</div>'
+    ).join('')
+  )).join('');
+}
+
+results.addEventListener('click', e => {
+  const btn = e.target.closest('button.copy');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.cmd).then(() => {
+    const old = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  });
+});
+
+q.addEventListener('input', render);
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+  if (e.key === 'Escape' && document.activeElement === q) { q.value = ''; render(); }
+});
+
+render();
+</script>
+</body>
+</html>

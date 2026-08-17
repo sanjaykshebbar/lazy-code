@@ -18,12 +18,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
+import json
 import sys
 import urllib.parse
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 README = REPO_ROOT / "README.md"
+DOCS_HTML = REPO_ROOT / "docs" / "index.html"
 
 RAW_BASE = "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main"
 
@@ -140,6 +143,11 @@ def collect() -> dict[str, list[dict]]:
 
 
 def render_entry(entry: dict) -> str:
+    """One table row per script.
+
+    Rows rather than stacked blocks: 39 scripts as blocks ran to ~9 lines each,
+    which is unreadable and made Ctrl+F results hard to place.
+    """
     url = f"{RAW_BASE}/{urllib.parse.quote(entry['path'])}"
     interp = entry["interpreter"]
 
@@ -150,12 +158,14 @@ def render_entry(entry: dict) -> str:
     else:
         command = f"curl -fsSL {url} | {interp}"
 
+    # A literal pipe would end the table cell.
+    command = command.replace("|", "\\|")
+
+    name = Path(entry["path"]).name
     return (
-        f"**{entry['description']}**\n\n"
-        f"`{entry['path']}`\n\n"
-        "```bash\n"
-        f"{command}\n"
-        "```\n"
+        f"| [`{name}`]({urllib.parse.quote(entry['path'])}) "
+        f"| {entry['description']} "
+        f"| `{command}` |"
     )
 
 
@@ -163,8 +173,12 @@ def render(found: dict[str, list[dict]]) -> str:
     out: list[str] = [BEGIN, ""]
 
     total = sum(len(v) for v in found.values())
-    out.append(f"> {total} scripts, generated automatically from the repository.")
-    out.append("> Do not edit this section by hand - see [Adding a script](#adding-a-script).")
+    out.append(f"> **{total} scripts.** Press <kbd>Ctrl</kbd>+<kbd>F</kbd> "
+               "(<kbd>⌘</kbd>+<kbd>F</kbd> on macOS) to search this page - every "
+               "section below is expanded by default so find-in-page reaches it.")
+    out.append(">")
+    out.append("> This section is generated. Do not edit it by hand - "
+               "see [Adding a script](#adding-a-script).")
     out.append("")
 
     for tab, tab_title in (("standard", "Standard Scripts"), ("intune", "Intune Based Scripts")):
@@ -193,11 +207,18 @@ def render(found: dict[str, list[dict]]) -> str:
             # Sort by path so subdirectory scripts group together at the end of
             # a section, rather than interleaving by basename.
             entries = sorted(found[key], key=lambda e: e["path"])
-            out.append(f"<details>")
+
+            # `open` matters for more than tidiness: Firefox and Safari will not
+            # find text inside a collapsed <details>, so leaving these shut would
+            # silently break Ctrl+F for most of the page.
+            out.append("<details open>")
             out.append(f"<summary><b>{icon} {heading}</b> &nbsp;<code>{len(entries)}</code></summary>")
             out.append("")
+            out.append("| Script | What it does | Install |")
+            out.append("|:--|:--|:--|")
             for entry in entries:
                 out.append(render_entry(entry))
+            out.append("")
             out.append("</details>")
             out.append("")
 
@@ -213,6 +234,212 @@ def render(found: dict[str, list[dict]]) -> str:
 
     out.append(END)
     return "\n".join(out)
+
+
+def build_command(entry: dict) -> str:
+    """The runnable one-liner for a script, unescaped."""
+    url = f"{RAW_BASE}/{urllib.parse.quote(entry['path'])}"
+    interp = entry["interpreter"]
+    if interp == "powershell":
+        return f"irm {url} | iex"
+    if interp == "python3":
+        return f"curl -fsSL {url} -o report.py && python3 report.py"
+    return f"curl -fsSL {url} | {interp}"
+
+
+HTML_TEMPLATE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lazy Code - script search</title>
+<style>
+  :root {
+    --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --line:#d1d9e0;
+    --card:#f6f8fa; --accent:#0969da; --code:#f6f8fa; --hit:#fff8c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#3d444d;
+      --card:#151b23; --accent:#4493f8; --code:#151b23; --hit:#3f2e00;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:2rem 1rem 4rem; background:var(--bg); color:var(--fg);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  .wrap { max-width:1000px; margin:0 auto; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; }
+  .sub { color:var(--muted); margin:0 0 1.5rem; }
+  .sub a { color:var(--accent); }
+  .searchbar { position:sticky; top:0; background:var(--bg); padding:.75rem 0 1rem; z-index:5; }
+  input[type=search] {
+    width:100%; padding:.7rem .9rem; font-size:1rem; color:var(--fg);
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
+  }
+  input[type=search]:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .count { color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+  h2 { font-size:1.05rem; margin:1.75rem 0 .6rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+  .item { padding:.7rem 0; border-bottom:1px solid var(--line); }
+  .top { display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
+  .name { font-weight:600; }
+  .name a { color:var(--accent); text-decoration:none; }
+  .name a:hover { text-decoration:underline; }
+  .path { color:var(--muted); font-size:.8rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .desc { color:var(--fg); margin:.15rem 0 .45rem; }
+  .cmdrow { display:flex; gap:.5rem; align-items:stretch; }
+  code.cmd {
+    flex:1; display:block; background:var(--code); border:1px solid var(--line);
+    border-radius:6px; padding:.45rem .6rem; font-size:.8rem; overflow-x:auto;
+    white-space:pre; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  button.copy {
+    border:1px solid var(--line); background:var(--card); color:var(--fg);
+    border-radius:6px; padding:0 .7rem; cursor:pointer; font-size:.8rem; white-space:nowrap;
+  }
+  button.copy:hover { border-color:var(--accent); color:var(--accent); }
+  mark { background:var(--hit); color:inherit; padding:0 .1em; border-radius:2px; }
+  .empty { color:var(--muted); padding:2rem 0; }
+  kbd {
+    border:1px solid var(--line); border-bottom-width:2px; border-radius:4px;
+    padding:0 .35em; font-size:.8em; background:var(--card);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lazy Code</h1>
+  <p class="sub">__TOTAL__ setup scripts &middot;
+    <a href="https://github.com/sanjaykshebbar/lazy-code">repository</a></p>
+
+  <div class="searchbar">
+    <input type="search" id="q" placeholder="Search by name, description or platform..."
+           autocomplete="off" autofocus aria-label="Search scripts">
+    <div class="count" id="count">Press <kbd>/</kbd> to focus &middot; <kbd>Esc</kbd> to clear</div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const q = document.getElementById('q');
+const results = document.getElementById('results');
+const count = document.getElementById('count');
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
+function mark(text, term) {
+  const safe = esc(text);
+  if (!term) return safe;
+  // Escape regex metacharacters so a query like "c++" cannot throw.
+  const re = new RegExp('(' + term.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + ')', 'ig');
+  return safe.replace(re, '<mark>$1</mark>');
+}
+
+function render() {
+  const term = q.value.trim();
+  const lower = term.toLowerCase();
+
+  const hits = DATA.filter(d =>
+    !lower ||
+    d.name.toLowerCase().includes(lower) ||
+    d.description.toLowerCase().includes(lower) ||
+    d.platform.toLowerCase().includes(lower) ||
+    d.path.toLowerCase().includes(lower)
+  );
+
+  count.textContent = term
+    ? hits.length + ' of ' + DATA.length + ' scripts match "' + term + '"'
+    : DATA.length + ' scripts';
+
+  if (!hits.length) {
+    results.innerHTML = '<p class="empty">No scripts match that search.</p>';
+    return;
+  }
+
+  const groups = {};
+  hits.forEach(d => (groups[d.group] = groups[d.group] || []).push(d));
+
+  results.innerHTML = Object.keys(groups).map(g => (
+    '<h2>' + esc(g) + ' <span class="path">' + groups[g].length + '</span></h2>' +
+    groups[g].map(d =>
+      '<div class="item">' +
+        '<div class="top">' +
+          '<span class="name"><a href="https://github.com/sanjaykshebbar/lazy-code/blob/main/' +
+            encodeURI(d.path) + '">' + mark(d.name, term) + '</a></span>' +
+          '<span class="path">' + mark(d.path, term) + '</span>' +
+        '</div>' +
+        '<div class="desc">' + mark(d.description, term) + '</div>' +
+        '<div class="cmdrow">' +
+          '<code class="cmd">' + esc(d.command) + '</code>' +
+          '<button class="copy" data-cmd="' + esc(d.command) + '">Copy</button>' +
+        '</div>' +
+      '</div>'
+    ).join('')
+  )).join('');
+}
+
+results.addEventListener('click', e => {
+  const btn = e.target.closest('button.copy');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.cmd).then(() => {
+    const old = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  });
+});
+
+q.addEventListener('input', render);
+
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+  if (e.key === 'Escape' && document.activeElement === q) { q.value = ''; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
+"""
+
+
+def render_html(found: dict[str, list[dict]]) -> str:
+    """A standalone search page for GitHub Pages.
+
+    A live search box cannot work inside README.md - GitHub strips <script> from
+    rendered markdown - so the searchable view is published separately and
+    linked from the README. Regenerated by the same command, from the same data.
+    """
+    tab_titles = {"standard": "Standard", "intune": "Intune"}
+    records: list[dict] = []
+
+    for prefix, tab, heading, icon in SECTIONS:
+        key = f"{tab}|{heading}|{icon}"
+        for entry in sorted(found.get(key, []), key=lambda e: e["path"]):
+            records.append(
+                {
+                    "name": Path(entry["path"]).name,
+                    "path": entry["path"],
+                    "description": entry["description"],
+                    "platform": heading,
+                    "group": f"{icon} {tab_titles[tab]} - {heading}",
+                    "command": build_command(entry),
+                }
+            )
+
+    payload = json.dumps(records, indent=1).replace("</", "<\\/")
+
+    return (
+        HTML_TEMPLATE
+        .replace("__DATA__", payload)
+        .replace("__TOTAL__", str(len(records)))
+    )
 
 
 def main() -> int:
@@ -233,21 +460,35 @@ def main() -> int:
     head, _, rest = current.partition(BEGIN)
     _, _, tail = rest.partition(END)
 
-    updated = head + render(collect()) + tail
+    found = collect()
+    updated = head + render(found) + tail
+    page = render_html(found)
+
+    current_page = DOCS_HTML.read_text(encoding="utf-8") if DOCS_HTML.exists() else None
 
     if args.check:
+        stale = []
         if updated != current:
-            print("README.md is out of date - run: python scripts/generate_readme.py")
+            stale.append("README.md")
+        if page != current_page:
+            stale.append("docs/index.html")
+        if stale:
+            print(f"Out of date: {', '.join(stale)} - "
+                  "run: python scripts/generate_readme.py")
             return 1
-        print("README.md is up to date.")
+        print("README.md and docs/index.html are up to date.")
         return 0
 
-    if updated == current:
-        print("README.md already up to date.")
-        return 0
+    changed = []
+    if updated != current:
+        README.write_text(updated, encoding="utf-8", newline="\n")
+        changed.append("README.md")
+    if page != current_page:
+        DOCS_HTML.parent.mkdir(parents=True, exist_ok=True)
+        DOCS_HTML.write_text(page, encoding="utf-8", newline="\n")
+        changed.append("docs/index.html")
 
-    README.write_text(updated, encoding="utf-8", newline="\n")
-    print("README.md regenerated.")
+    print(f"Regenerated: {', '.join(changed)}" if changed else "Already up to date.")
     return 0
 
 

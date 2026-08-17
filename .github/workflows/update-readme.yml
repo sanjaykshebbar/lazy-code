@@ -47,20 +47,22 @@ jobs:
       - name: Verify the result is self-consistent
         run: python scripts/generate_readme.py --check
 
-      - name: Commit and push if the README changed
+      - name: Commit and push if anything changed
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- README.md; then
-            echo "README.md is already up to date - nothing to commit."
+          # docs/index.html is the GitHub Pages search page, generated from the
+          # same data as the README - both must move together.
+          if git diff --quiet -- README.md docs/index.html; then
+            echo "README.md and docs/index.html are already up to date - nothing to commit."
             exit 0
           fi
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add README.md
-          git commit -m "docs: regenerate README script index [skip ci]"
+          git add README.md docs/index.html
+          git commit -m "docs: regenerate README and search index [skip ci]"
 
           # The branch may have moved while this job was running; rebase rather
           # than force-push so a concurrent commit is never discarded.
