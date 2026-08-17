@@ -26,7 +26,7 @@ Each entry below lists its path so you can find the source quickly. The pipe tar
 
 <!-- BEGIN:AUTOGEN-SCRIPTS -->
 
-> DRIFT-TEST placeholder, should be restored by the Action.
+> 39 scripts, generated automatically from the repository.
 > Do not edit this section by hand - see [Adding a script](#adding-a-script).
 
 <details open>
