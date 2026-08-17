@@ -30,14 +30,14 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Use the default token so the follow-up push is attributed to the
           # workflow. fetch-depth 0 is not needed - only the tip is rewritten.
           persist-credentials: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
