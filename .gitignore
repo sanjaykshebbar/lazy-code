@@ -1,0 +1,17 @@
+# macOS finder metadata - was previously committed by accident
+.DS_Store
+**/.DS_Store
+
+# Editor / OS noise
+.vscode/
+.idea/
+Thumbs.db
+*.swp
+
+# Local scratch
+*.log
+tmp/
+
+# Python bytecode from the README generator
+__pycache__/
+*.pyc

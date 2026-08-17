@@ -1,82 +1,25 @@
-#!/usr/bin/env bash
-###############################################################################
-# Author  : Sanjay KS
-# Email   : sanjaykshebbar@gmail.com
-# GitHub  : https://github.com/sanjaykshebbar/Automation
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  macOS/install-nvm.sh
 #
-# What does this code do:
-# - Installs NVM (Node Version Manager) on macOS
-# - Uses the official NVM install script (no Homebrew)
-# - Installs NVM in user space (~/.nvm)
-# - Configures ~/.zshrc or ~/.bashrc automatically
-# - Does not require sudo
-###############################################################################
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-nvm.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'macOS/install-nvm.sh' - forwarding to the new location..." >&2
 
-set -e
-
-# ----------------------------- #
-# Configuration                 #
-# ----------------------------- #
-
-NVM_DIR="$HOME/.nvm"
-NVM_INSTALL_URL="https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh"
-
-# ----------------------------- #
-# Pre-flight checks             #
-# ----------------------------- #
-
-for cmd in curl; do
-  command -v "$cmd" >/dev/null 2>&1 || {
-    echo "ERROR: Required command '$cmd' not found."
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-nvm.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch macOS/install-nvm.sh" >&2
+    rm -f "$_tmp"
     exit 1
-  }
-done
-
-# ----------------------------- #
-# Install NVM                   #
-# ----------------------------- #
-
-if [[ -d "$NVM_DIR" ]]; then
-  echo "NVM already installed at $NVM_DIR"
-else
-  echo "Installing NVM..."
-  curl -fsSL "$NVM_INSTALL_URL" | bash
 fi
-
-# ----------------------------- #
-# Shell configuration           #
-# ----------------------------- #
-
-if [[ -f "$HOME/.zshrc" ]]; then
-  RC="$HOME/.zshrc"
-elif [[ -f "$HOME/.bashrc" ]]; then
-  RC="$HOME/.bashrc"
-else
-  RC="$HOME/.profile"
-fi
-
-# Ensure NVM initialization exists
-if ! grep -q 'NVM_DIR="$HOME/.nvm"' "$RC"; then
-  echo "" >> "$RC"
-  echo "# NVM configuration" >> "$RC"
-  echo 'export NVM_DIR="$HOME/.nvm"' >> "$RC"
-  echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> "$RC"
-  echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> "$RC"
-fi
-
-# ----------------------------- #
-# Load NVM for current session  #
-# ----------------------------- #
-
-export NVM_DIR="$HOME/.nvm"
-# shellcheck disable=SC1091
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-# ----------------------------- #
-# Verification                  #
-# ----------------------------- #
-
-echo "Verification:"
-nvm --version
-
-echo "NVM installation completed successfully."
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc

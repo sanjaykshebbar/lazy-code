@@ -1,97 +1,25 @@
-#!/usr/bin/env bash
-###############################################################################
-# Author  : Sanjay KS
-# Email   : sanjaykshebbar@gmail.com
-# GitHub  : https://github.com/sanjaykshebbar/Automation
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  macOS/install-postgresql.sh
 #
-# What does this code do:
-# - Downloads official PostgreSQL macOS binaries
-# - Installs only the psql CLI in user space
-# - Configures PATH in ~/.zshrc or ~/.bashrc
-# - Works without sudo and without Homebrew
-###############################################################################
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-postgresql.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'macOS/install-postgresql.sh' - forwarding to the new location..." >&2
 
-set -e
-
-# ----------------------------- #
-# Variables                     #
-# ----------------------------- #
-
-PG_VERSION="16.2"
-BASE_DIR="$HOME/clitools/psql"
-TMP_DIR="$(mktemp -d)"
-
-ARCH="$(uname -m)"
-if [[ "$ARCH" == "arm64" ]]; then
-  PG_ARCH="arm64"
-else
-  PG_ARCH="x86_64"
-fi
-
-PG_TAR="postgresql-${PG_VERSION}-osx-${PG_ARCH}-binaries.tar.gz"
-PG_URL="https://ftp.postgresql.org/pub/binary/v${PG_VERSION}/osx/${PG_TAR}"
-
-# ----------------------------- #
-# Pre-checks                    #
-# ----------------------------- #
-
-for cmd in curl tar; do
-  command -v "$cmd" >/dev/null || {
-    echo "ERROR: $cmd not found"
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-postgresql.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch macOS/install-postgresql.sh" >&2
+    rm -f "$_tmp"
     exit 1
-  }
-done
-
-mkdir -p "$BASE_DIR"
-
-# ----------------------------- #
-# Download                      #
-# ----------------------------- #
-
-echo "Downloading PostgreSQL ${PG_VERSION} (${PG_ARCH})..."
-cd "$TMP_DIR"
-curl -fLO "$PG_URL"
-
-# ----------------------------- #
-# Extract                       #
-# ----------------------------- #
-
-echo "Extracting psql..."
-tar -xzf "$PG_TAR"
-
-# Copy only CLI-related files
-cp -R postgresql/* "$BASE_DIR"
-
-# ----------------------------- #
-# PATH setup                    #
-# ----------------------------- #
-
-PSQL_BIN="$BASE_DIR/bin"
-
-if [[ -f "$HOME/.zshrc" ]]; then
-  RC="$HOME/.zshrc"
-elif [[ -f "$HOME/.bashrc" ]]; then
-  RC="$HOME/.bashrc"
-else
-  RC="$HOME/.profile"
 fi
-
-if ! grep -q "$PSQL_BIN" "$RC"; then
-  echo "" >> "$RC"
-  echo "# PostgreSQL psql CLI" >> "$RC"
-  echo "export PATH=\"$PSQL_BIN:\$PATH\"" >> "$RC"
-fi
-
-export PATH="$PSQL_BIN:$PATH"
-
-# ----------------------------- #
-# Cleanup                       #
-# ----------------------------- #
-
-rm -rf "$TMP_DIR"
-
-# ----------------------------- #
-# Verification                  #
-# ----------------------------- #
-
-psql --version
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc

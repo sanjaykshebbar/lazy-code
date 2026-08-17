@@ -1,69 +1,25 @@
-#!/bin/bash
-set -e
-
-# -------------------------------------------------
-# NOTE:
-# Xcode Command Line Tools MUST be installed
-# before running this script.
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  macOS/install-gnupg.sh
 #
-# Install manually (one-time):
-#   xcode-select --install
-# -------------------------------------------------
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-gnupg.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'macOS/install-gnupg.sh' - forwarding to the new location..." >&2
 
-# -------- CONFIG --------
-GPG_VERSION="2.4.5"
-PREFIX="$HOME/cli/gnupg"
-SRC_DIR="$HOME/src/gnupg"
-URL="https://mirrors.kernel.org/gnupg/gnupg/gnupg-${GPG_VERSION}.tar.bz2"
-# ------------------------
-
-echo "==> Installing GnuPG ${GPG_VERSION} (no Homebrew)"
-echo "==> Install prefix: ${PREFIX}"
-
-# 1. Prepare directories
-mkdir -p "$SRC_DIR"
-cd "$SRC_DIR"
-
-# 2. Download source
-if [ ! -f "gnupg-${GPG_VERSION}.tar.bz2" ]; then
-  echo "==> Downloading GnuPG source"
-  curl -fLO "$URL"
-else
-  echo "==> Source archive already exists, skipping download"
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-gnupg.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch macOS/install-gnupg.sh" >&2
+    rm -f "$_tmp"
+    exit 1
 fi
-
-# 3. Extract
-echo "==> Extracting source"
-tar -xjf "gnupg-${GPG_VERSION}.tar.bz2"
-cd "gnupg-${GPG_VERSION}"
-
-# 4. Configure
-echo "==> Configuring build"
-./configure --prefix="$PREFIX"
-
-# 5. Build
-echo "==> Building"
-make -j"$(sysctl -n hw.ncpu)"
-
-# 6. Install
-echo "==> Installing"
-make install
-
-# 7. Update PATH (zsh + bash)
-if ! grep -q "$PREFIX/bin" "$HOME/.zshrc" 2>/dev/null; then
-  echo "export PATH=\"$PREFIX/bin:\$PATH\"" >> "$HOME/.zshrc"
-fi
-
-if ! grep -q "$PREFIX/bin" "$HOME/.bashrc" 2>/dev/null; then
-  echo "export PATH=\"$PREFIX/bin:\$PATH\"" >> "$HOME/.bashrc"
-fi
-
-# 8. Reload PATH for current session
-export PATH="$PREFIX/bin:$PATH"
-
-# 9. Verify
-echo "==> Verification"
-which gpg
-gpg --version
-
-echo "==> GnuPG installation completed"
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc

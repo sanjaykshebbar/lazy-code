@@ -1,3 +1,5 @@
+# Description: Render collected diagnostics into a readable report
+# Platform: macOS
 import json
 
 with open("network_usage.json") as f:

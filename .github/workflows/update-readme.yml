@@ -1,0 +1,68 @@
+name: Update README
+
+# Regenerates the script tables in README.md whenever a script is added, renamed
+# or removed. This is what makes "just drop a file in and push" work - including
+# for files added through the GitHub web UI or from a phone.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Windows/**'
+      - 'Linux/**'
+      - 'macOS/**'
+      - 'Intune/**'
+      - 'DockerFiles/**'
+      - 'scripts/generate_readme.py'
+      - '.github/workflows/update-readme.yml'
+  workflow_dispatch:
+
+# Needed so the workflow can push the regenerated README back to the branch.
+permissions:
+  contents: write
+
+concurrency:
+  group: update-readme-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          # Use the default token so the follow-up push is attributed to the
+          # workflow. fetch-depth 0 is not needed - only the tip is rewritten.
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Regenerate README
+        run: python scripts/generate_readme.py
+
+      - name: Verify the result is self-consistent
+        run: python scripts/generate_readme.py --check
+
+      - name: Commit and push if the README changed
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- README.md; then
+            echo "README.md is already up to date - nothing to commit."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add README.md
+          git commit -m "docs: regenerate README script index [skip ci]"
+
+          # The branch may have moved while this job was running; rebase rather
+          # than force-push so a concurrent commit is never discarded.
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

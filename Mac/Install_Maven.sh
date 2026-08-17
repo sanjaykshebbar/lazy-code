@@ -1,47 +1,25 @@
-#!/bin/sh
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  macOS/install-maven-mvnd.sh
+#
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-maven-mvnd.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'macOS/install-maven-mvnd.sh' - forwarding to the new location..." >&2
 
-ARCH=$(uname -m)
-
-# Detect architecture type
-if [ "$ARCH" = "arm64" ]; then
-    echo "Detected Mac Type: Apple Silicon (ARM64)"
-    DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-aarch64.zip"
-else
-    echo "Detected Mac Type: Intel (x86_64)"
-    DOWNLOAD_URL="https://dlcdn.apache.org/maven/mvnd/1.0.3/maven-mvnd-1.0.3-darwin-amd64.zip"
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-maven-mvnd.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch macOS/install-maven-mvnd.sh" >&2
+    rm -f "$_tmp"
+    exit 1
 fi
-
-echo "Downloading mvnd from: $DOWNLOAD_URL"
-curl -L -o mvn.zip "$DOWNLOAD_URL"
-
-echo "Unzipping..."
-unzip -q mvn.zip
-
-BASE_DIR="$HOME/Clitools"
-TARGET_DIR="$BASE_DIR/mvn"
-
-# Create folder if missing
-mkdir -p "$BASE_DIR"
-
-# Detect extracted folder
-EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "maven-mvnd-1.0.3*")
-
-# Remove existing mvn folder to avoid conflicts
-rm -rf "$TARGET_DIR"
-
-# Move extracted directory into ~/Clitools/mvn
-mv "$EXTRACTED_DIR" "$TARGET_DIR"
-
-# Add PATH entries only if not already present
-if ! grep -q "Clitools/mvn" ~/.zshrc; then
-    echo "\n# Maven + mvnd path" >> ~/.zshrc
-    echo "export PATH=\"\$PATH:$TARGET_DIR/mvn/bin\"" >> ~/.zshrc   # mvn CLI
-    echo "export PATH=\"\$PATH:$TARGET_DIR/bin\"" >> ~/.zshrc       # mvnd CLI
-fi
-
-echo "Cleaning up..."
-rm mvn.zip
-
-echo "Installation complete!"
-echo "Run the following command to activate mvn and mvnd:"
-echo "source ~/.zshrc"
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc

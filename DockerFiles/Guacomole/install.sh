@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Description: Apache Guacamole remote-desktop gateway via Docker Compose
+# Platform: Docker
 
 set -euo pipefail
 

@@ -1,0 +1,19 @@
+# These scripts are fetched with curl and executed on macOS/Linux.
+# A CRLF line ending makes the shebang fail with "bad interpreter: /bin/bash^M",
+# so force LF regardless of the committer's platform (this repo is edited from Windows).
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.zsh   text eol=lf
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+
+# PowerShell is run by Windows hosts; CRLF is correct there.
+*.ps1   text eol=crlf
+
+# Never touch binaries.
+*.dmg   binary
+*.exe   binary
+*.tgz   binary
+*.tar.gz binary
+SentinelOps/bin/** binary

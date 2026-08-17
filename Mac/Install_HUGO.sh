@@ -1,47 +1,25 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  macOS/install-hugo.sh
+#
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-hugo.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'macOS/install-hugo.sh' - forwarding to the new location..." >&2
 
-INSTALL_DIR="$HOME/cli/hugo"
-ZSHRC="$HOME/.zshrc"
-
-ARCH=$(uname -m)
-if [[ "$ARCH" == "arm64" ]]; then
-    MATCH="macOS-ARM64.tar.gz"
-elif [[ "$ARCH" == "x86_64" ]]; then
-    MATCH="macOS-64bit.tar.gz"
-else
-    echo "Unsupported architecture"
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-hugo.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch macOS/install-hugo.sh" >&2
+    rm -f "$_tmp"
     exit 1
 fi
-
-echo "Fetching latest release metadata..."
-
-ASSET_URL=$(curl -fsSL https://api.github.com/repos/gohugoio/hugo/releases/latest \
-  | grep browser_download_url \
-  | grep "$MATCH" \
-  | grep extended \
-  | cut -d '"' -f 4 \
-  | head -n 1)
-
-if [ -z "$ASSET_URL" ]; then
-    echo "Failed to locate correct Hugo asset"
-    exit 1
-fi
-
-echo "Downloading: $ASSET_URL"
-
-mkdir -p "$INSTALL_DIR"
-
-curl -fL "$ASSET_URL" -o /tmp/hugo.tar.gz
-tar -xzf /tmp/hugo.tar.gz -C "$INSTALL_DIR"
-rm /tmp/hugo.tar.gz
-
-chmod +x "$INSTALL_DIR/hugo"
-
-if ! grep -q 'export PATH="$HOME/cli/hugo:$PATH"' "$ZSHRC" 2>/dev/null; then
-    echo 'export PATH="$HOME/cli/hugo:$PATH"' >> "$ZSHRC"
-fi
-
-source "$ZSHRC"
-
-"$INSTALL_DIR/hugo" version
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc

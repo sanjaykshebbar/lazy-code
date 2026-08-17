@@ -1,50 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env sh
+# lazy-code-stub: true
+# =============================================================================
+# MOVED - this script now lives at:  Linux/reset-kubernetes.sh
+#
+# This stub exists only so previously published curl URLs keep working.
+# Please switch to the new URL:
+#   curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/reset-kubernetes.sh | bash
+#
+# It downloads the real script to a temp file and executes it, so the target's
+# own shebang chooses the interpreter (safer than piping into a fixed shell).
+# =============================================================================
+echo "NOTE: this path has moved to 'Linux/reset-kubernetes.sh' - forwarding to the new location..." >&2
 
-# Function to reset Kubernetes cluster
-reset_kubernetes() {
-    echo "Resetting Kubernetes cluster..."
-    sudo kubeadm reset -f
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to reset Kubernetes cluster."
-        exit 1
-    fi
-    echo "Kubernetes cluster reset successfully."
-}
-
-# Function to remove residual files
-remove_residual_files() {
-    echo "Removing residual files..."
-    sudo rm -rf ~/.kube
-    sudo rm -rf /etc/kubernetes
-    sudo rm -rf /var/lib/etcd
-    sudo rm -rf /var/lib/kubelet/*
-    sudo rm -rf /var/run/kubernetes
-    sudo rm -rf /etc/cni/net.d
-    sudo rm -rf /opt/cni/bin
-
-    # If you used any network plugin, you might want to remove its configurations as well
-    # Example: Calico, Flannel, etc.
-    # sudo rm -rf /etc/cni/net.d/<network-plugin-config>
-
-    echo "Residual files removed successfully."
-}
-
-# Function to clean up Docker
-clean_docker() {
-    echo "Cleaning up Docker images and containers..."
-    sudo docker system prune -af
-
-    if [ $? -ne 0 ]; then
-        echo "Failed to clean up Docker."
-        exit 1
-    fi
-    echo "Docker cleaned up successfully."
-}
-
-# Main script execution
-reset_kubernetes
-remove_residual_files
-clean_docker
-
-echo "Kubernetes and residual files have been successfully reset."
+_tmp="$(mktemp)" || exit 1
+if ! curl -fsSL "https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Linux/reset-kubernetes.sh" -o "$_tmp"; then
+    echo "ERROR: could not fetch Linux/reset-kubernetes.sh" >&2
+    rm -f "$_tmp"
+    exit 1
+fi
+chmod +x "$_tmp"
+"$_tmp" "$@"
+_rc=$?
+rm -f "$_tmp"
+exit $_rc
