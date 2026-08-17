@@ -184,7 +184,7 @@ curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS
 curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-intellij-idea-ce.sh | bash
 ```
 
-**Apache JMeter, including a Java 21 check**
+**Apache JMeter on macOS - no sudo, no Homebrew, with a Java check**
 
 `macOS/install-jmeter.sh`
 
