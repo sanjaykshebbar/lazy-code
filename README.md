@@ -36,12 +36,21 @@ by default so find-in-page reaches all of it.
 
 <!-- BEGIN:AUTOGEN-SCRIPTS -->
 
-> **39 scripts.** Press <kbd>Ctrl</kbd>+<kbd>F</kbd> (<kbd>⌘</kbd>+<kbd>F</kbd> on macOS) to search this page - every section below is expanded by default so find-in-page reaches it.
+> **40 scripts.** Press <kbd>Ctrl</kbd>+<kbd>F</kbd> (<kbd>⌘</kbd>+<kbd>F</kbd> on macOS) to search this page - every section below is expanded by default so find-in-page reaches it.
 >
 > This section is generated. Do not edit it by hand - see [Adding a script](#adding-a-script).
 
 <details open>
-<summary><h3>&nbsp;Standard Scripts &nbsp;<code>34</code></h3></summary>
+<summary><h3>&nbsp;Standard Scripts &nbsp;<code>35</code></h3></summary>
+
+<details open>
+<summary><b>🪟 Windows</b> &nbsp;<code>1</code></summary>
+
+| Script | What it does | Install |
+|:--|:--|:--|
+| [`windows_hardening_neo.ps1`](Windows/windows_hardening_neo.ps1) | Windows hardening neo | `irm https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Windows/windows_hardening_neo.ps1 \| iex` |
+
+</details>
 
 <details open>
 <summary><b>🐧 Linux</b> &nbsp;<code>5</code></summary>
@@ -122,9 +131,6 @@ Packaged for deployment through Microsoft Intune. These run as root in the Intun
 </details>
 
 </details>
-
-> **Windows:** no standard scripts yet. Drop a `.ps1` into `Windows/`
-> with a `# Description:` line and it will appear here automatically.
 
 <!-- END:AUTOGEN-SCRIPTS -->
 
