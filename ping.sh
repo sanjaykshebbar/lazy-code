@@ -4,14 +4,9 @@
 # macOS Network Diagnostics
 # Captures system details and performs network ping tests.
 # Output: Five diagnostic files in a folder on the user's Desktop.
-# Run with:  bash mac_network_diagnostics.sh
+# Run with:  sh mac_network_diagnostics.sh
+#        or:  curl -fsSL <raw-url> | sh
 # ============================================================
-
-# Re-launch under bash if started with sh or zsh
-# (read -p and [[ ]] are bash features and fail elsewhere).
-if [ -z "${BASH_VERSION:-}" ]; then
-    exec /bin/bash "$0" "$@"
-fi
 
 set -u
 
@@ -76,24 +71,23 @@ echo "Detected DNS server 1: ${DNS1:-Not detected}"
 echo "Detected DNS server 2: ${DNS2:-Not detected}"
 echo
 
-INPUT=""
+# When run as "curl ... | sh", stdin is the script itself, so prompts
+# must read from the terminal (/dev/tty) or they swallow script lines.
+ask() {
+    # $1 = prompt label, $2 = current value; prints the chosen value
+    printf '%s [%s]: ' "$1" "${2:-enter manually}" > /dev/tty
+    ANSWER=""
+    read -r ANSWER < /dev/tty || ANSWER=""
+    if [ -n "$ANSWER" ]; then
+        echo "$ANSWER"
+    else
+        echo "$2"
+    fi
+}
 
-read -r -p "Gateway IP [${GATEWAY:-enter manually}]: " INPUT
-if [[ -n "$INPUT" ]]; then
-    GATEWAY="$INPUT"
-fi
-
-INPUT=""
-read -r -p "DNS server 1 [${DNS1:-enter manually}]: " INPUT
-if [[ -n "$INPUT" ]]; then
-    DNS1="$INPUT"
-fi
-
-INPUT=""
-read -r -p "DNS server 2 [${DNS2:-enter manually}]: " INPUT
-if [[ -n "$INPUT" ]]; then
-    DNS2="$INPUT"
-fi
+GATEWAY=$(ask "Gateway IP" "${GATEWAY:-}")
+DNS1=$(ask "DNS server 1" "${DNS1:-}")
+DNS2=$(ask "DNS server 2" "${DNS2:-}")
 
 # ------------------------------------------------------------
 # Save system and network configuration
@@ -143,7 +137,7 @@ run_ping() {
         echo "Test start: $(date '+%Y-%m-%d %H:%M:%S %Z')"
         echo "--------------------------------------------------"
 
-        if [[ -z "$target" ]]; then
+        if [ -z "$target" ]; then
             echo "ERROR: Target not detected. Test skipped."
         else
             "$ping_cmd" -i "$PING_INTERVAL" -c "$PING_COUNT" "$target"
