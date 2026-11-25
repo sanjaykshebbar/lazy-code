@@ -61,7 +61,7 @@
 <body>
 <div class="wrap">
   <h1>Lazy Code</h1>
-  <p class="sub">40 setup scripts &middot;
+  <p class="sub">42 setup scripts &middot;
     <a href="https://github.com/sanjaykshebbar/lazy-code">repository</a></p>
 
   <div class="searchbar">
@@ -75,6 +75,14 @@
 
 <script>
 const DATA = [
+ {
+  "name": "setup-wallpaperwizard.ps1",
+  "path": "Windows/setup-wallpaperwizard.ps1",
+  "description": "Enable OpenSSH and show the WallpaperWizard enrollment steps on Windows.",
+  "platform": "Windows",
+  "group": "\ud83e\ude9f Standard - Windows",
+  "command": "irm https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Windows/setup-wallpaperwizard.ps1 | iex"
+ },
  {
   "name": "windows_hardening_neo.ps1",
   "path": "Windows/windows_hardening_neo.ps1",
@@ -322,6 +330,14 @@ const DATA = [
   "platform": "macOS",
   "group": "\ud83c\udf4e Standard - macOS",
   "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/scripts_with_logs/install-cocoapods-verbose.sh | bash"
+ },
+ {
+  "name": "setup-wallpaperwizard.sh",
+  "path": "macOS/setup-wallpaperwizard.sh",
+  "description": "Enable Remote Login and print the SSH fingerprint used to enroll a MacBook in WallpaperWizard.",
+  "platform": "macOS",
+  "group": "\ud83c\udf4e Standard - macOS",
+  "command": "curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/setup-wallpaperwizard.sh | bash"
  },
  {
   "name": "collect-network-usage.sh",
