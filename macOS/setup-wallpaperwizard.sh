@@ -24,10 +24,20 @@ esac
 
 step 2 'Enabling Remote Login'
 if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:space:]]*On[[:space:]]*$'; then
-  if ! sudo_status=$(LC_ALL=C /usr/sbin/systemsetup -setremotelogin on 2>&1); then
-    printf '%s\n' "$sudo_status" >&2
-  fi
+  remote_login_message=$(LC_ALL=C /usr/sbin/systemsetup -setremotelogin on 2>&1) || true
   if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:space:]]*On[[:space:]]*$'; then
+    if [ -n "$remote_login_message" ]; then
+      printf '%s\n' "$remote_login_message" >&2
+    fi
+    case "$remote_login_message" in
+      *'Full Disk Access'*)
+        printf '%s\n' \
+          'macOS requires an administrator to approve Full Disk Access for Terminal.' \
+          'If you want to use Terminal for this step, open System Settings > Privacy & Security > Full Disk Access.' \
+          'Enable Terminal, authenticate when prompted, then quit and reopen Terminal before running setup again.' \
+          'You can also turn on Remote Login directly in Sharing settings and rerun setup with the current Terminal permissions.' >&2
+        ;;
+    esac
     fail 'Turn on Remote Login in System Settings > General > Sharing, allow your device administrator account, then run setup again.'
   fi
 fi
