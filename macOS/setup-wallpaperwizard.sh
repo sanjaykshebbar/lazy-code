@@ -33,9 +33,21 @@ if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:spa
       *'Full Disk Access'*)
         printf '%s\n' \
           'macOS requires an administrator to approve Full Disk Access for Terminal.' \
-          'If you want to use Terminal for this step, open System Settings > Privacy & Security > Full Disk Access.' \
+          'Open Full Disk Access manually from System Settings > Privacy & Security if needed.' \
           'Enable Terminal, authenticate when prompted, then quit and reopen Terminal before running setup again.' \
           'You can also turn on Remote Login directly in Sharing settings and rerun setup with the current Terminal permissions.' >&2
+        if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_UID:-0}" -ne 0 ]; then
+          case "$(/usr/bin/sw_vers -productVersion)" in
+            10.*|11.*|12.*)
+              settings_url='x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles'
+              ;;
+            *)
+              settings_url='x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles'
+              ;;
+          esac
+          /bin/launchctl asuser "$SUDO_UID" /usr/bin/sudo -u "$SUDO_USER" -- /usr/bin/open "$settings_url" ||
+            printf '%s\n' 'Could not open the Settings window. Open Full Disk Access manually.' >&2
+        fi
         ;;
     esac
     fail 'Turn on Remote Login in System Settings > General > Sharing, allow your device administrator account, then run setup again.'
