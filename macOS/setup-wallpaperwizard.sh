@@ -1,25 +1,35 @@
 #!/bin/bash
-# Description: Enable Remote Login and enroll a MacBook in WallpaperWizard.
-# Run once in Terminal with sudo. Use the dashboard's setup command for automatic enrollment.
+# Description: Enable Remote Login and advertise the WallpaperWizard MacBook discovery marker.
+# Run once in Terminal with sudo. The script contains no credentials.
 set -euo pipefail
+
+discovery_marker='WW_MACOS_SHA256_987ead801447509838f013e86c3cefee3ea3a8f02593f3dcf342937ca9071bb1'
 
 step() { printf '\n[%s/4] %s\n' "$1" "$2"; }
 fail() { printf '\nSetup stopped. %s\n' "$1" >&2; exit 1; }
 
-submit_fingerprint() {
-  local endpoint="$1" code="$2" fingerprint="$3" proof status
-  case "$endpoint" in
-    http://*/api/macbook-enrollment/complete|https://*/api/macbook-enrollment/complete) ;;
-    *) return 1 ;;
-  esac
-  [[ "$code" =~ ^[a-f0-9]{32}\.[a-f0-9]{64}$ ]] || return 1
-  proof=$(printf '%s' "$fingerprint" | /usr/bin/openssl dgst -sha256 -hmac "${code#*.}" -r | /usr/bin/awk '{print $1}') ||
-    return 1
-  status=$(/usr/bin/curl --disable --fail --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' \
-    --data-urlencode "ticketId=${code%%.*}" --data-urlencode "fingerprint=$fingerprint" \
-    --data-urlencode "proof=$proof" "$endpoint") || return 1
-  [ "$status" = 200 ]
-}
+configure_discovery_marker() (
+  config=/etc/ssh/sshd_config
+  [ -f "$config" ] && [ ! -L "$config" ] ||
+    fail 'Ask your Mac administrator to add the discovery marker to the active SSH configuration.'
+
+  /usr/bin/ssh-keygen -A || fail 'Could not generate any missing SSH host keys.'
+  effective=$(/usr/sbin/sshd -T -f "$config") || fail 'Could not read the active SSH configuration.'
+  addendum=$(printf '%s\n' "$effective" | /usr/bin/sed -n 's/^versionaddendum //p')
+  case " $addendum " in *" $discovery_marker "*) exit 0 ;; esac
+
+  candidate=$(/usr/bin/mktemp /etc/ssh/.wallpaperwizard-sshd.XXXXXX)
+  trap '/bin/rm -f "$candidate"' EXIT
+  /bin/cp -p "$config" "$candidate" || fail 'Could not stage the SSH configuration.'
+  {
+    printf '# WallpaperWizard discovery\nVersionAddendum %s' "$discovery_marker"
+    if [ -n "$addendum" ] && [ "$addendum" != none ]; then printf ' %s' "$addendum"; fi
+    printf '\n\n'
+    /bin/cat "$config"
+  } > "$candidate"
+  /usr/sbin/sshd -t -f "$candidate" || fail 'SSH rejected the proposed discovery setting. Check the sshd configuration.'
+  /bin/mv -f "$candidate" "$config" || fail 'Could not apply the discovery marker.'
+)
 
 printf 'WallpaperWizard MacBook setup\n'
 printf 'This prepares the MacBook for wallpaper management over SSH.\n'
@@ -70,29 +80,11 @@ if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:spa
 fi
 printf 'Remote Login is on. Verify your device administrator is allowed under its Sharing settings.\n'
 
-step 3 'Reading this MacBook’s public SSH host fingerprint'
-key=/etc/ssh/ssh_host_ed25519_key.pub
-if [ ! -r "$key" ]; then
-  /usr/bin/ssh-keygen -A || fail 'SSH host key generation failed.'
-fi
-fingerprint=$(/usr/bin/ssh-keygen -E sha256 -lf "$key" | /usr/bin/awk '{print $2}') ||
-  fail 'Could not read the Ed25519 SSH host fingerprint.'
-case "$fingerprint" in
-  SHA256:*) ;;
-  *) fail 'Could not read the Ed25519 SSH host fingerprint.' ;;
-esac
+step 3 'Configuring the MacBook discovery marker'
+configure_discovery_marker
 
-step 4 'Finishing MacBook enrollment'
-printf '\n%s\n\n' "$fingerprint"
-if [ "$#" -gt 0 ]; then
-  if [ "$#" -eq 2 ] && submit_fingerprint "$1" "$2" "$fingerprint"; then
-    printf 'Fingerprint sent to WallpaperWizard.\n'
-    printf 'In Devices, select Scan now, then approve this MacBook when it is reachable.\n'
-    exit 0
-  fi
-  printf 'Could not confirm automatic enrollment. Check Devices or follow the manual steps below.\n' >&2
-fi
-printf '1. In Dashboard > Push Settings, paste the SHA256 value into MacBook fingerprints.\n'
-printf '2. Add this MacBook address or its network range and save your settings.\n'
-printf '3. In Dashboard > Devices, select Scan now and approve the MacBook if it is pending.\n'
-printf '4. Keep a user signed in for a wallpaper push. Allow System Events if macOS prompts.\n'
+step 4 'MacBook setup complete'
+printf '\nDiscovery marker: %s\n\n' "$discovery_marker"
+printf '1. In Push Settings, save a network range that includes this MacBook.\n'
+printf '2. In Devices, select Scan now and approve this MacBook when it appears.\n'
+printf '3. Keep a user signed in for a wallpaper push. Allow System Events if macOS prompts.\n'

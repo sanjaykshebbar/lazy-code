@@ -48,7 +48,7 @@ by default so find-in-page reaches all of it.
 
 | Script | What it does | Install |
 |:--|:--|:--|
-| [`setup-wallpaperwizard.ps1`](Windows/setup-wallpaperwizard.ps1) | Enable OpenSSH and show the WallpaperWizard enrollment steps on Windows. | `irm https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Windows/setup-wallpaperwizard.ps1 \| iex` |
+| [`setup-wallpaperwizard.ps1`](Windows/setup-wallpaperwizard.ps1) | Enable OpenSSH and advertise the WallpaperWizard Windows discovery marker. | `irm https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Windows/setup-wallpaperwizard.ps1 \| iex` |
 | [`windows_hardening_neo.ps1`](Windows/windows_hardening_neo.ps1) | Windows hardening neo | `irm https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/Windows/windows_hardening_neo.ps1 \| iex` |
 
 </details>
@@ -96,7 +96,7 @@ by default so find-in-page reaches all of it.
 | [`install-teleport-v14.sh`](macOS/install-teleport-v14.sh) | Teleport v14 client (tsh), architecture auto-detected | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-teleport-v14.sh \| bash` |
 | [`install-terraform.sh`](macOS/install-terraform.sh) | Terraform - resolves the current release automatically | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/install-terraform.sh \| bash` |
 | [`install-cocoapods-verbose.sh`](macOS/scripts_with_logs/install-cocoapods-verbose.sh) | CocoaPods install with full step-by-step logging | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/scripts_with_logs/install-cocoapods-verbose.sh \| bash` |
-| [`setup-wallpaperwizard.sh`](macOS/setup-wallpaperwizard.sh) | Enable Remote Login and enroll a MacBook in WallpaperWizard. | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/setup-wallpaperwizard.sh \| bash` |
+| [`setup-wallpaperwizard.sh`](macOS/setup-wallpaperwizard.sh) | Enable Remote Login and advertise the WallpaperWizard MacBook discovery marker. | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/setup-wallpaperwizard.sh \| bash` |
 | [`collect-network-usage.sh`](macOS/troubleshooting/collect-network-usage.sh) | Sample per-process network usage over time | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/collect-network-usage.sh \| bash` |
 | [`generate-network-report.sh`](macOS/troubleshooting/generate-network-report.sh) | Collect a macOS network diagnostic report | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/generate-network-report.sh \| bash` |
 | [`generate-report.py`](macOS/troubleshooting/generate-report.py) | Render collected diagnostics into a readable report | `curl -fsSL https://raw.githubusercontent.com/sanjaykshebbar/lazy-code/main/macOS/troubleshooting/generate-report.py -o report.py && python3 report.py` |
