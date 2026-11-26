@@ -62,6 +62,15 @@ try {
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         throw 'Open Windows PowerShell with Run as administrator, then run the setup command again.'
     }
+    $deviceAdmin = Get-LocalUser -Name 'ithelpdesk' -ErrorAction SilentlyContinue
+    if (-not $deviceAdmin -or -not $deviceAdmin.Enabled) {
+        throw 'WallpaperWizard requires an enabled local account named .\ithelpdesk. Ask your Windows administrator to configure it, then run setup again.'
+    }
+    $adminMember = Get-LocalGroupMember -SID 'S-1-5-32-544' | Where-Object { $_.SID.Value -eq $deviceAdmin.SID.Value }
+    if (-not $adminMember) {
+        throw 'Add the local .\ithelpdesk account to the local Administrators group, then run setup again.'
+    }
+    Write-Host 'Confirmed .\ithelpdesk is a local administrator.'
 
     Show-WallpaperWizardStep 2 'Checking the OpenSSH Server feature'
     $feature = Get-WindowsCapability -Online -Name 'OpenSSH.Server*' | Select-Object -First 1
@@ -96,7 +105,7 @@ try {
     Write-Host 'Windows setup complete.' -ForegroundColor Green
     Write-Host "Discovery marker: $discoveryMarker"
     Write-Host '1. In Dashboard > Push Settings, add this PC address or its network range and save.'
-    Write-Host '2. Confirm the device administrator credentials are saved before pushing wallpapers.'
+    Write-Host '2. Save the password for .\ithelpdesk in Push Settings.'
     Write-Host '3. In Dashboard > Devices, select Scan now and approve this PC.'
 } catch {
     Write-Host ("Setup stopped. {0}" -f $_.Exception.Message) -ForegroundColor Red

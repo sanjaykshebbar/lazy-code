@@ -47,6 +47,18 @@ case "$model" in
   *) fail "WallpaperWizard enrolls MacBook models. Detected model: ${model:-unknown}." ;;
 esac
 
+if ! local_uid=$(/usr/bin/dscl /Local/Default -read /Users/ithelpdesk UniqueID 2>/dev/null |
+    /usr/bin/awk '$1 == "UniqueID:" { print $2 }'); then
+  fail 'WallpaperWizard requires a local account named ithelpdesk. Ask your Mac administrator to configure it.'
+fi
+if [ -z "$local_uid" ] || [ "$local_uid" = 0 ] || [ "$(/usr/bin/id -u ithelpdesk)" != "$local_uid" ]; then
+  fail 'WallpaperWizard requires a local account named ithelpdesk. Ask your Mac administrator to configure it.'
+fi
+if ! /usr/bin/id -Gn ithelpdesk | /usr/bin/grep -qw admin; then
+  fail 'Give the local ithelpdesk account administrator privileges in Users & Groups, then run setup again.'
+fi
+printf 'Confirmed ithelpdesk is a local administrator.\n'
+
 step 2 'Enabling Remote Login'
 if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:space:]]*On[[:space:]]*$'; then
   remote_login_message=$(LC_ALL=C /usr/sbin/systemsetup -setremotelogin on 2>&1) || true
@@ -78,13 +90,13 @@ if ! LC_ALL=C /usr/sbin/systemsetup -getremotelogin | /usr/bin/grep -Eq ':[[:spa
     fail 'Turn on Remote Login in System Settings > General > Sharing, allow your device administrator account, then run setup again.'
   fi
 fi
-printf 'Remote Login is on. Verify your device administrator is allowed under its Sharing settings.\n'
+printf 'Remote Login is on. Verify ithelpdesk is allowed under its Sharing settings.\n'
 
 step 3 'Configuring the MacBook discovery marker'
 configure_discovery_marker
 
 step 4 'MacBook setup complete'
 printf '\nDiscovery marker: %s\n\n' "$discovery_marker"
-printf '1. In Push Settings, save a network range that includes this MacBook.\n'
+printf '1. In Push Settings, save the ithelpdesk password and a network range that includes this MacBook.\n'
 printf '2. In Devices, select Scan now and approve this MacBook when it appears.\n'
 printf '3. Keep a user signed in for a wallpaper push. Allow System Events if macOS prompts.\n'
