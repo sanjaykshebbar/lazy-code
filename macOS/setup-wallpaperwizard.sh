@@ -7,7 +7,7 @@ step() { printf '\n[%s/4] %s\n' "$1" "$2"; }
 fail() { printf '\nSetup stopped. %s\n' "$1" >&2; exit 1; }
 
 submit_fingerprint() {
-  local endpoint="$1" code="$2" fingerprint="$3" proof
+  local endpoint="$1" code="$2" fingerprint="$3" proof status
   case "$endpoint" in
     http://*/api/macbook-enrollment/complete|https://*/api/macbook-enrollment/complete) ;;
     *) return 1 ;;
@@ -15,9 +15,10 @@ submit_fingerprint() {
   [[ "$code" =~ ^[a-f0-9]{32}\.[a-f0-9]{64}$ ]] || return 1
   proof=$(printf '%s' "$fingerprint" | /usr/bin/openssl dgst -sha256 -hmac "${code#*.}" -r | /usr/bin/awk '{print $1}') ||
     return 1
-  /usr/bin/curl --disable --fail --silent --show-error --max-time 15 --output /dev/null \
+  status=$(/usr/bin/curl --disable --fail --silent --show-error --max-time 15 --output /dev/null --write-out '%{http_code}' \
     --data-urlencode "ticketId=${code%%.*}" --data-urlencode "fingerprint=$fingerprint" \
-    --data-urlencode "proof=$proof" "$endpoint"
+    --data-urlencode "proof=$proof" "$endpoint") || return 1
+  [ "$status" = 200 ]
 }
 
 printf 'WallpaperWizard MacBook setup\n'
